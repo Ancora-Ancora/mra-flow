@@ -1,6 +1,6 @@
 ---
 name: mra-sync
-description: Use when the delta specs of an in-progress OpenSpec change in the low-and-slow orchestrator must reach the main specs before archive, e.g. so another change can build on them - in the mra-flow workflow.
+description: Use when the delta specs of an in-progress OpenSpec change in an mra-flow orchestrator must reach the main specs before archive, e.g. so another change can build on them - in the mra-flow workflow.
 disable-model-invocation: true
 argument-hint: <change-id>
 ---

@@ -1,6 +1,6 @@
 ---
 name: mra-track
-description: Use when an OpenSpec change in the low-and-slow orchestrator has validated artifacts and its tasks must be tracked in beads - phase 3 of the mra-flow workflow.
+description: Use when an OpenSpec change in an mra-flow orchestrator has validated artifacts and its tasks must be tracked in beads - phase 3 of the mra-flow workflow.
 disable-model-invocation: true
 argument-hint: <change-id>
 ---
@@ -18,9 +18,9 @@ Turn `openspec/changes/<change-id>/tasks.md` into a beads epic with one child is
    bd create "<change-id>: <proposal title>" -t epic -l openspec:<change-id> \
      --spec-id openspec/changes/<change-id> -d "<proposal Why, 1-3 lines>" --silent
    ```
-4. For each checkbox task `X.Y [be|fe] <text>`, create a child (labels `openspec:*` are inherited). The title is short: `X.Y <summary>`, where the summary is the part of `<text>` before `; verify` (or its first clause), at most ~80 chars. The full text goes in the description:
+4. For each checkbox task `X.Y [<key>] <text>`, create a child (labels `openspec:*` are inherited). The title is short: `X.Y <summary>`, where the summary is the part of `<text>` before `; verify` (or its first clause), at most ~80 chars. The full text goes in the description:
    ```bash
-   bd create "X.Y <summary>" -t task --parent <epic> -l repo:<be|fe> \
+   bd create "X.Y <summary>" -t task --parent <epic> -l repo:<key> \
      -d "<full text>" --acceptance "<verification stated in the task; Covers: lines>" --silent
    ```
    Keep a map `X.Y → issue id`.
@@ -32,4 +32,4 @@ Turn `openspec/changes/<change-id>/tasks.md` into a beads epic with one child is
 ## Rules
 
 - `tasks.md` checkboxes stay unticked; beads holds live status.
-- A task missing its `[be]`/`[fe]` tag: stop and ask, do not guess the repo.
+- A task missing its `[<key>]` tag, or naming a key not declared in `mra-flow.toml`: stop and ask, do not guess the repo.

@@ -1,19 +1,23 @@
 # Tasks
 
-## 1. Backend: <!-- Task Group Name -->
+<!-- Group tasks by code repo in integration order (.mra-flow/bin/mra-repo list: dependencies first). [<key>] is a repo key from mra-flow.toml -->
 
-- [ ] 1.1 [be] <!-- Task description, including how to verify it -->
+## 1. <key>: <!-- Task Group Name -->
+
+- [ ] 1.1 [<key>] <!-- Task description, including how to verify it -->
   Covers: <!-- Requirement / Scenario -->
-- [ ] 1.2 [be] <!-- Task description -->
+- [ ] 1.2 [<key>] <!-- Task description -->
   Depends on: 1.1
 
-## 2. Frontend: <!-- Task Group Name -->
+## 2. <dependent key>: <!-- Task Group Name -->
 
-- [ ] 2.1 [fe] <!-- Task description -->
+- [ ] 2.1 [<dependent key>] <!-- Task description -->
   Depends on: 1.1
   Covers: <!-- Requirement / Scenario -->
 
 ## 3. Integration
 
-- [ ] 3.1 [fe] <!-- End-to-end verification across both repos -->
+<!-- Only when a contract is involved -->
+
+- [ ] 3.1 [<dependent key>] <!-- End-to-end verification across the contract -->
   Depends on: 1.2, 2.1

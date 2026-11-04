@@ -12,7 +12,7 @@ If any of these files don't exist, **proceed silently**. Don't flag their absenc
 
 ## File structure
 
-This repo is **single-context**. It is an orchestrator: the glossary and ADRs at its root apply to both code repos.
+This repo is **single-context**. It is an orchestrator: the glossary and ADRs at its root apply to all its code repos.
 
 ```
 /                                   ← orchestrator (this repo)
@@ -21,8 +21,9 @@ This repo is **single-context**. It is an orchestrator: the glossary and ADRs at
 │   ├── 0001-example-decision.md
 │   └── 0002-another-decision.md
 ├── openspec/
-├── low-and-slow-cooking-lab-fe/    ← separate git repo (frontend)
-└── low-and-slow-cooking-lab-be/    ← separate git repo (backend)
+├── mra-flow.toml                   ← the code repos and their dependencies
+├── <repo path>/                    ← separate git repo, one per [repos.<key>]
+└── <repo path>/
 ```
 
 For reference, the multi-context layout (not used here):

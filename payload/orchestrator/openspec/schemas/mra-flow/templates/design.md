@@ -16,9 +16,9 @@
 
 <!-- Key design decisions with rationale and alternatives considered -->
 
-## FE↔BE Contract
+## Contract: <repo> -> <dependency>
 
-<!-- Required when both repos are touched: endpoints, payloads, status codes, error shapes, auth. Write "N/A - single repo" otherwise -->
+<!-- One section per touched repo whose depends_on dependency is touched too (keys from mra-flow.toml): endpoints, payloads, status codes, error shapes, auth, or the equivalent. If no such pair is touched, keep a single "## Contract" section with "N/A - no dependent repos touched" -->
 
 ## Risks / Trade-offs
 

@@ -68,14 +68,14 @@ flowchart TB
         pr1 --> pr2["openspec validate --strict"]:::os
         pr2 -- gaps --> pr3["openspec-update-change"]:::os
         pr2 -- ADR candidates --> pr4["mattpocock-skills:domain-modeling"]:::mp
-        pr2 --> prA["openspec/changes/#lt;id#gt;/<br/>proposal · specs/ · design.md (FE↔BE Contract) · tasks.md"]:::art
+        pr2 --> prA["openspec/changes/#lt;id#gt;/<br/>proposal · specs/ · design.md (Contract sections) · tasks.md"]:::art
     end
     subgraph TR["/mra-track"]
         direction TB
         tr["/mra-track"]:::phase --> tr1["bd create<br/>epic + 1 issue per task"]:::bd
         tr1 --> tr2["bd dep add"]:::bd
         tr2 --> tr3["bd dep cycles · bd ready"]:::bd
-        tr3 --> trA["beads epic openspec:#lt;id#gt;<br/>repo:be / repo:fe labels"]:::art
+        tr3 --> trA["beads epic openspec:#lt;id#gt;<br/>repo:#lt;key#gt; labels"]:::art
     end
 ```
 
@@ -104,7 +104,7 @@ flowchart TB
         bu3 -. spec gap .-> bu7["/mra-update"]:::phase
         bu5 --> bu8["final review per repo<br/>findings: bd create bug (epic) · needs-triage (outside)"]:::bd
         bu8 --> bu9["SDD rulings → epic notes"]:::bd
-        bu9 --> buA[".worktrees/#lt;id#gt;/{be,fe} · branch change/#lt;id#gt;<br/>plan.md (archived with the change) · 1 commit per issue"]:::art
+        bu9 --> buA[".worktrees/#lt;id#gt;/#lt;key#gt; · branch change/#lt;id#gt;<br/>plan.md (archived with the change) · 1 commit per issue"]:::art
     end
     subgraph VE["/mra-verify"]
         direction TB
@@ -119,14 +119,14 @@ flowchart TB
     subgraph FX["/mra-fix"]
         direction TB
         fx["/mra-fix"]:::phase --> fx1["superpowers:systematic-debugging<br/>default"]:::sp
-        fx --> fx2["mattpocock-skills:diagnosing-bugs<br/>perf · flaky · regression · FE↔BE · 3 failed hypotheses"]:::mp
+        fx --> fx2["mattpocock-skills:diagnosing-bugs<br/>perf · flaky · regression · cross-repo · 3 failed hypotheses"]:::mp
         fx1 & fx2 --> fx3["superpowers:test-driven-development<br/>reuse the reproducing test"]:::sp
         fx3 --> fx4["bd claim · bd close bug"]:::bd
         fx4 --> fxA["fix + regression test<br/>→ /mra-verify"]:::art
     end
     subgraph AR["/mra-archive"]
         direction TB
-        ar["/mra-archive"]:::phase --> ar1["superpowers:finishing-a-development-branch<br/>per repo: be, then fe"]:::sp
+        ar["/mra-archive"]:::phase --> ar1["superpowers:finishing-a-development-branch<br/>per repo, in integration order"]:::sp
         ar1 --> ar2["openspec-archive-change<br/>syncs specs"]:::os
         ar2 --> ar3["bd close epic"]:::bd
         ar3 --> arA["merge / PR per repo<br/>openspec/specs/ updated · epic closed"]:::art

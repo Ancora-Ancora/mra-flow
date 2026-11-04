@@ -1,12 +1,12 @@
 # Issue tracker: beads (`bd`)
 
 Issues for this project live in beads, in this orchestrator repo's Dolt database (`.beads/`).
-A single tracker covers both code repos (`low-and-slow-cooking-lab-fe`, `low-and-slow-cooking-lab-be`).
+A single tracker covers all code repos declared in `mra-flow.toml`.
 Do not use GitHub Issues or files under `.scratch/`.
 
 ## Conventions
 
-- **Target repo**: every implementation issue carries the label `repo:fe` or `repo:be` (both only if it genuinely touches both).
+- **Target repo**: every implementation issue carries the label `repo:<key>`, where `<key>` is a repo key from `mra-flow.toml` (several only if it genuinely touches several).
 - **OpenSpec change**: issues born from a change carry the label `openspec:<change-id>` and `--spec-id openspec/changes/<change-id>`.
 - **Hierarchy**: one change = one epic (`-t epic`); tasks are children (`--parent <epic-id>`). Labels are inherited from the parent.
 - **Types**: `task` for planned work, `bug` for defects, `epic` for changes.
@@ -15,7 +15,7 @@ Do not use GitHub Issues or files under `.scratch/`.
 ## When a skill says "publish to the issue tracker"
 
 ```bash
-bd create "<title>" -t task -d "<description>" -l repo:be,openspec:<change-id> --parent <epic-id>
+bd create "<title>" -t task -d "<description>" -l repo:<key>,openspec:<change-id> --parent <epic-id>
 ```
 
 For a spec (`to-spec`) without an OpenSpec change: create an epic with the spec as its description (`--body-file`).

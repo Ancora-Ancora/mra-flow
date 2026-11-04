@@ -16,8 +16,8 @@ artifacts:
         - **New Capabilities**: List capabilities being introduced. Each becomes a new `specs/<capability-path>/spec.md`. Name each capability for a durable system behavior (for example, `user-auth`), not the work in this change (for example, `add-login-endpoint`). Choose a cohesive boundary that can own related requirements as the system evolves; avoid broad catch-all capabilities. Use kebab-case for path segments you introduce (e.g., `user-auth` or `identity/user-auth`) and follow the project's existing spec organization.
         - **Modified Capabilities**: List existing capabilities whose REQUIREMENTS are changing. Only include if spec-level behavior changes (not just implementation details). Each needs a delta spec file. Use the exact existing path under `openspec/specs/`. Leave empty if no requirement changes.
       - **Impact**: Affected code, APIs, dependencies, or systems. Always state
-        which code repos the change touches: `fe` (low-and-slow-cooking-lab-fe),
-        `be` (low-and-slow-cooking-lab-be), or both.
+        which code repos the change touches, by their keys in `mra-flow.toml`
+        (`.mra-flow/bin/mra-repo list` prints key, path and `depends_on`).
 
       IMPORTANT: The Capabilities section is critical. It creates the contract between
       proposal and specs phases. Research existing specs before filling this in:
@@ -183,7 +183,8 @@ artifacts:
       Create the design document that explains HOW to implement the change.
 
       When to include design.md (create only if any apply):
-      - ALWAYS when the change touches both `fe` and `be` (see proposal Impact)
+      - ALWAYS when the change touches a code repo and one of its `depends_on`
+        (see proposal Impact and `mra-flow.toml`)
       - Cross-cutting change (multiple services/modules) or new architectural pattern
       - New external dependency or significant data model changes
       - Security, performance, or migration complexity
@@ -193,11 +194,14 @@ artifacts:
       - **Context**: Only the current state and constraints needed to explain the approach. Reference the proposal for motivation instead of restating it (e.g., "See proposal.md - Why").
       - **Goals / Non-Goals**: What this design achieves and explicitly excludes. Don't restate the proposal's scope - add only design-level boundaries.
       - **Decisions**: Key technical choices with rationale (why X over Y?). Include alternatives considered for each decision.
-      - **FE↔BE Contract**: Required when the change touches both repos. The
-        interface between them: endpoints (method + path), request/response
-        payload shapes, status codes and error shapes, auth expectations. This
-        is the source of truth both repos implement against. Write "N/A -
-        single repo" when only one repo is touched.
+      - **Contract: <repo> -> <dependency>**: one `## Contract: <repo> -> <dependency>`
+        section for each touched repo whose `depends_on` dependency is touched
+        too (keys from `mra-flow.toml`). The interface between them: e.g.
+        endpoints (method + path), request/response payload shapes, status
+        codes and error shapes, auth expectations, or the equivalent for other
+        kinds of interface. It is the source of truth both repos implement
+        against. When no such pair is touched, write a single
+        `## Contract` section with "N/A - no dependent repos touched".
       - **Risks / Trade-offs**: Known limitations, things that could go wrong. Format: [Risk] → Mitigation
       - **Migration Plan**: Steps to deploy, rollback strategy (if applicable)
       - **Open Questions**: Unknowns that can safely be answered later without
@@ -244,18 +248,18 @@ artifacts:
 
       Guidelines:
       - Group related tracked tasks under ## numbered headings, grouped by code
-        repo: backend groups first, then frontend, then a final integration
-        group when both repos are touched
-      - Each tracked task MUST be a checkbox: `- [ ] X.Y [be|fe] Task description`.
-        The `[be]`/`[fe]` tag names the repo the task lands in and becomes the
-        beads label `repo:be`/`repo:fe`
+        repo in integration order (`.mra-flow/bin/mra-repo list`: dependencies
+        first), then a final integration group when a contract is involved
+      - Each tracked task MUST be a checkbox: `- [ ] X.Y [<key>] Task description`.
+        The `[<key>]` tag is the key of a repo declared in `mra-flow.toml`: the
+        repo the task lands in. It becomes the beads label `repo:<key>`
       - Under each task, add indented plain lines (no checkbox) when relevant:
         `Depends on: X.Y[, X.Y]` for tasks that cannot start before others
         (they become beads dependencies), and `Covers: <Requirement name> /
         <Scenario name>` naming the spec scenarios the task's tests prove
       - Every spec scenario MUST be covered by at least one task
-      - Frontend tasks that consume the backend depend on the backend task
-        implementing that part of the FE↔BE Contract
+      - A task in a repo that consumes a dependency's interface depends on the
+        dependency's task implementing that part of the contract
       - Each task becomes one beads issue implemented by one subagent: keep it
         independently implementable and testable
       - Tasks should be small enough to complete in one session
@@ -280,7 +284,8 @@ artifacts:
         carries neither. A final group is for integration checks only, not for
         the tests and docs an earlier group owed.
 
-      Example:
+      Example, for an orchestrator whose `mra-flow.toml` declares `be` and a
+      `fe` with `depends_on = ["be"]`:
       ```
       # Tasks
 
@@ -322,7 +327,8 @@ apply:
   instruction: |
     STOP. Do not implement this change through the OpenSpec apply workflow.
     In this project implementation runs outside OpenSpec: tasks are tracked in
-    beads and built with the superpowers suite, in the fe/be code repos.
+    beads and built with the superpowers suite, in the code repos declared in
+    mra-flow.toml.
     Tell the user, and point them to the `## Workflow` section of the
     orchestrator's CLAUDE.md for the track and build steps. Make no code
     changes and do not tick checkboxes in tasks.md.
