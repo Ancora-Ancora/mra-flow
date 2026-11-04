@@ -11,7 +11,7 @@ On a new machine, do these steps in order, then [Install](#install) and [Verify]
 
 ### 1. Tools
 
-- git, python3 >= 3.11, [gh](https://cli.github.com/), [bd (beads)](https://github.com/gastownhall/beads), [OpenSpec](https://github.com/Fission-AI/OpenSpec) >= 1.16.0, Claude Code.
+- git, python3 >= 3.11, Node.js >= 20.19 with npm (for OpenSpec), [gh](https://cli.github.com/), [bd (beads)](https://github.com/gastownhall/beads), Claude Code. OpenSpec and the plugins are covered below.
 
 ### 2. GitHub access
 
@@ -32,7 +32,16 @@ bd dolt push
 
 Or set it once for good: `gh auth setup-git`.
 
-### 3. OpenSpec workflows
+### 3. OpenSpec
+
+OpenSpec is an npm package and needs Node.js (20.19 or newer). Install the CLI globally and check the version:
+
+```bash
+npm install -g @fission-ai/openspec@latest
+openspec --version         # must be >= 1.16.0
+```
+
+If `npm install -g` fails with a permission error, point npm at a user prefix (`npm config set prefix ~/.npm-global` and add `~/.npm-global/bin` to `PATH`) instead of using `sudo`.
 
 The `mra-*` skills call the OpenSpec workflows `explore`, `propose`, `update`, `sync` and `archive`. Enable them in your global profile:
 
@@ -41,11 +50,25 @@ openspec config profile    # interactive: choose "custom" and tick at least thos
 openspec config list       # check the "workflows" list
 ```
 
-In an orchestrator that already exists, run `openspec update` afterwards to regenerate its OpenSpec skills.
+The orchestrator installer runs `openspec init` for a new orchestrator, which generates the OpenSpec skills from this profile. In an orchestrator that already exists, run `openspec update` after changing the profile to regenerate them. To upgrade OpenSpec later, rerun the `npm install` line, then `openspec update` in each orchestrator.
 
-### 4. Claude Code plugins
+### 4. Claude Code plugins: superpowers and mattpocock-skills
 
-The workflow needs the `superpowers` and `mattpocock-skills` plugins from the `claude-plugins-official` marketplace. The orchestrator installer only *enables* them in `.claude/settings.json`; install them once per machine, inside Claude Code:
+The workflow needs two plugins, both published in the `claude-plugins-official` marketplace (GitHub repo `anthropics/claude-plugins-official`):
+
+- **superpowers**: process skills used by the phases (brainstorming, TDD, systematic debugging, plans, verification before completion, worktrees).
+- **mattpocock-skills**: grilling, domain modeling (`GLOSSARY.md`, ADRs), code review, TDD and the `handoff` skill.
+
+The orchestrator installer only *enables* them in `.claude/settings.json`; it does not install them. Install them once per machine, at user scope, from a shell:
+
+```bash
+claude plugin marketplace add anthropics/claude-plugins-official   # skip if already listed
+claude plugin install superpowers@claude-plugins-official
+claude plugin install mattpocock-skills@claude-plugins-official
+claude plugin list                                                  # both must be listed
+```
+
+Or from inside Claude Code, with the same arguments:
 
 ```text
 /plugin marketplace add anthropics/claude-plugins-official
@@ -53,13 +76,13 @@ The workflow needs the `superpowers` and `mattpocock-skills` plugins from the `c
 /plugin install mattpocock-skills@claude-plugins-official
 ```
 
-Restart Claude Code after installing.
+Restart Claude Code after installing. To upgrade later: `claude plugin marketplace update claude-plugins-official`, then `claude plugin update superpowers@claude-plugins-official` (same for `mattpocock-skills`).
 
 ## Install
 
 ```bash
 gh repo clone Ancora-Ancora/mra-flow ~/.cache/mra-flow
-git -C ~/.cache/mra-flow checkout v0.1.1
+git -C ~/.cache/mra-flow checkout v0.1.2
 ~/.cache/mra-flow/install.sh --user              # once per machine
 ~/.cache/mra-flow/install.sh <orchestrator-dir>  # per orchestrator
 ```
