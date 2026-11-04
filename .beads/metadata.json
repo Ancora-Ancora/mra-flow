@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "mra_flow",
+  "project_id": "9f8c7ec0-aea0-4f9d-841c-f2ee21fefeb9"
+}
