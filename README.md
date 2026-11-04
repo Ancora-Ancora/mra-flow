@@ -5,17 +5,61 @@ A spec-driven workflow for projects split across several code repos: an **orches
 - **user** (`install.sh --user`, once per machine): personal conventions for every project, orchestrator or not: handoff rules and the SessionStart hook that loads the latest handoff, language, memory, task tracking. Installed into the Claude Code config dir (`~/.claude`, or `$CLAUDE_CONFIG_DIR`).
 - **orchestrator** (`install.sh <dir>`, per orchestrator): the custom OpenSpec workflow: `mra-*` skills, the `mra-flow` schema, `mra-repo`, docs.
 
-## Prerequisites
+## Setup from scratch
 
-- git, python3 >= 3.11, [bd (beads)](https://github.com/gastownhall/beads), [OpenSpec](https://github.com/Fission-AI/OpenSpec) >= 1.16.0
-- OpenSpec workflows enabled in your profile: explore, propose, update, sync, archive
-- Claude Code plugins `superpowers` and `mattpocock-skills` from `claude-plugins-official` (the installer declares them in `.claude/settings.json`)
+On a new machine, do these steps in order, then [Install](#install) and [Verify](#verify).
+
+### 1. Tools
+
+- git, python3 >= 3.11, [gh](https://cli.github.com/), [bd (beads)](https://github.com/gastownhall/beads), [OpenSpec](https://github.com/Fission-AI/OpenSpec) >= 1.16.0, Claude Code.
+
+### 2. GitHub access
+
+The repos are private HTTPS repos. Log in once with `gh auth login`. If git has no credential helper, let `gh` supply the token per command:
+
+```bash
+git -c credential.helper= -c credential.helper='!gh auth git-credential' push ...
+```
+
+`bd dolt push` takes no `-c` flag; pass the same helper through the environment:
+
+```bash
+GIT_CONFIG_COUNT=2 \
+GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0= \
+GIT_CONFIG_KEY_1=credential.helper GIT_CONFIG_VALUE_1='!gh auth git-credential' \
+bd dolt push
+```
+
+Or set it once for good: `gh auth setup-git`.
+
+### 3. OpenSpec workflows
+
+The `mra-*` skills call the OpenSpec workflows `explore`, `propose`, `update`, `sync` and `archive`. Enable them in your global profile:
+
+```bash
+openspec config profile    # interactive: choose "custom" and tick at least those five
+openspec config list       # check the "workflows" list
+```
+
+In an orchestrator that already exists, run `openspec update` afterwards to regenerate its OpenSpec skills.
+
+### 4. Claude Code plugins
+
+The workflow needs the `superpowers` and `mattpocock-skills` plugins from the `claude-plugins-official` marketplace. The orchestrator installer only *enables* them in `.claude/settings.json`; install them once per machine, inside Claude Code:
+
+```text
+/plugin marketplace add anthropics/claude-plugins-official
+/plugin install superpowers@claude-plugins-official
+/plugin install mattpocock-skills@claude-plugins-official
+```
+
+Restart Claude Code after installing.
 
 ## Install
 
 ```bash
 gh repo clone Ancora-Ancora/mra-flow ~/.cache/mra-flow
-git -C ~/.cache/mra-flow checkout v0.1.0
+git -C ~/.cache/mra-flow checkout v0.1.1
 ~/.cache/mra-flow/install.sh --user              # once per machine
 ~/.cache/mra-flow/install.sh <orchestrator-dir>  # per orchestrator
 ```
@@ -31,6 +75,16 @@ For an orchestrator, the installer refuses, changing nothing, if a file it would
 - creates an empty, commented `mra-flow.toml`.
 
 It never rewrites `mra-flow.toml`, `GLOSSARY.md`, `docs/adr/` or `openspec/specs/`. Review the result with `git status` and commit it.
+
+## Verify
+
+Start a new Claude Code session in the orchestrator and check:
+
+1. **Handoff hook.** Write a handoff (`/mattpocock-skills:handoff`), then `/clear`: the new session gets it injected exactly once, and its frontmatter turns to `read: true`. The hook is registered only in `~/.claude/settings.json`, not in the project's settings.
+2. **Conventions.** `/memory` lists both `~/.claude/mra-flow/CLAUDE.md` and `.mra-flow/CLAUDE.md` as loaded.
+3. **Skills.** Typing `/mra` offers the 11 `mra-*` commands. The agent does not list them among its own skills: they set `disable-model-invocation: true`, so only you can start a phase.
+4. **Repos.** `.mra-flow/bin/mra-repo list` prints your code repos, dependencies first.
+5. **Plugins.** Typing `/superpowers:` and `/mattpocock-skills:` offers their commands.
 
 ## Update
 

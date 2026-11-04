@@ -29,6 +29,8 @@ def make_package(tmp: Path) -> Path:
             shutil.copytree(src, pkg / part, ignore=shutil.ignore_patterns("__pycache__"))
         elif src.exists():
             shutil.copy2(src, pkg / part)
+    # Pin the version so tests do not depend on the release being prepared.
+    (pkg / "VERSION").write_text("0.1.0\n")
     return pkg
 
 
