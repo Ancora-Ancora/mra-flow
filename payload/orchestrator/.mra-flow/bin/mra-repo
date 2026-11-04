@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""Manage the code repos of an mra-flow orchestrator, declared in mra-flow.toml.
+
+  mra-repo add <key> <remote> --description TEXT [--depends-on KEY ...] [--path DIR]
+  mra-repo clone     clone every declared repo that is missing (after a fresh clone)
+  mra-repo list      key, path, depends_on per repo, in integration order
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+REGISTRY = ROOT / "mra-flow.toml"
+KEY_RE = re.compile(r"^[a-z][a-z0-9-]*$")
+
+
+class Refusal(Exception):
+    pass
+
+
+def load() -> dict[str, dict]:
+    if not REGISTRY.exists():
+        raise Refusal(f"{REGISTRY.name} not found in {ROOT}; is mra-flow installed?")
+    try:
+        data = tomllib.loads(REGISTRY.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        raise Refusal(f"{REGISTRY.name} is not valid TOML: {exc}") from exc
+    repos = data.get("repos", {})
+    for key, repo in repos.items():
+        for field in ("path", "remote", "description"):
+            if not isinstance(repo.get(field), str):
+                raise Refusal(f"repos.{key}.{field} is missing or not a string")
+        repo.setdefault("depends_on", [])
+    return repos
+
+
+def integration_order(repos: dict[str, dict]) -> list[str]:
+    """Dependencies first; ties broken by key. Refuses unknown deps and cycles."""
+    for key, repo in repos.items():
+        unknown = [d for d in repo["depends_on"] if d not in repos]
+        if unknown:
+            raise Refusal(f"repos.{key} depends on undeclared: {', '.join(unknown)}")
+    waiting = {k: set(r["depends_on"]) for k, r in repos.items()}
+    order: list[str] = []
+    while waiting:
+        ready = sorted(k for k, deps in waiting.items() if not deps)
+        if not ready:
+            raise Refusal("dependency cycle among: " + ", ".join(sorted(waiting)))
+        for k in ready:
+            order.append(k)
+            del waiting[k]
+        for deps in waiting.values():
+            deps.difference_update(ready)
+    return order
+
+
+def ensure_ignored(path: str) -> None:
+    gitignore = ROOT / ".gitignore"
+    line = f"/{path}/"
+    text = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+    present = {x.strip() for x in text.splitlines()}
+    if {line, f"{path}/", f"/{path}", path} & present:
+        return
+    if text and not text.endswith("\n"):
+        text += "\n"
+    gitignore.write_text(text + line + "\n", encoding="utf-8")
+
+
+def git_clone(remote: str, path: str) -> None:
+    done = subprocess.run(["git", "clone", "--quiet", remote, path], cwd=ROOT,
+                          capture_output=True, text=True)
+    if done.returncode != 0:
+        raise Refusal(f"git clone {remote} failed: {done.stderr.strip()}")
+
+
+def default_path(remote: str) -> str:
+    name = remote.rstrip("/").rsplit("/", 1)[-1].rsplit(":", 1)[-1]
+    return name[:-4] if name.endswith(".git") else name
+
+
+def cmd_add(args: argparse.Namespace) -> None:
+    repos = load()
+    key = args.key
+    if not KEY_RE.match(key):
+        raise Refusal(f"bad key {key!r}: use lowercase letters, digits and '-', starting with a letter")
+    if key in repos:
+        raise Refusal(f"repo {key!r} is already declared")
+    unknown = [d for d in args.depends_on if d not in repos]
+    if unknown:
+        raise Refusal(f"undeclared dependencies: {', '.join(unknown)}; add them first")
+    path = args.path or default_path(args.remote)
+    if (ROOT / path).exists():
+        raise Refusal(f"{path} already exists in {ROOT}")
+
+    original = REGISTRY.read_bytes()
+    git_clone(args.remote, path)
+    table = (
+        f"\n[repos.{key}]\n"
+        f"path = {json.dumps(path)}\n"
+        f"remote = {json.dumps(args.remote)}\n"
+        f"description = {json.dumps(args.description)}\n"
+        f"depends_on = {json.dumps(args.depends_on)}\n"
+    )
+    text = original.decode("utf-8")
+    if text and not text.endswith("\n"):
+        text += "\n"
+    REGISTRY.write_text(text + table, encoding="utf-8")
+    try:
+        load()
+    except Refusal:
+        REGISTRY.write_bytes(original)
+        raise
+    ensure_ignored(path)
+    print(f"added {key}: cloned into {path}, declared in {REGISTRY.name}")
+
+
+def cmd_clone(_: argparse.Namespace) -> None:
+    repos = load()
+    for key in integration_order(repos):
+        repo = repos[key]
+        if (ROOT / repo["path"]).exists():
+            print(f"{key}: present")
+        else:
+            git_clone(repo["remote"], repo["path"])
+            print(f"{key}: cloned")
+        ensure_ignored(repo["path"])
+    subprocess.run(["git", "config", "beads.role", "maintainer"], cwd=ROOT, check=True)
+
+
+def cmd_list(_: argparse.Namespace) -> None:
+    repos = load()
+    for key in integration_order(repos):
+        repo = repos[key]
+        print(f"{key}\t{repo['path']}\t{','.join(repo['depends_on'])}")
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="mra-repo", description=__doc__.splitlines()[0])
+    sub = parser.add_subparsers(dest="command", required=True)
+    add = sub.add_parser("add", help="clone a code repo and declare it")
+    add.add_argument("key")
+    add.add_argument("remote")
+    add.add_argument("--description", required=True)
+    add.add_argument("--depends-on", nargs="*", default=[], metavar="KEY")
+    add.add_argument("--path")
+    add.set_defaults(func=cmd_add)
+    sub.add_parser("clone", help="clone missing declared repos").set_defaults(func=cmd_clone)
+    sub.add_parser("list", help="repos in integration order").set_defaults(func=cmd_list)
+    args = parser.parse_args(argv)
+    try:
+        args.func(args)
+    except Refusal as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

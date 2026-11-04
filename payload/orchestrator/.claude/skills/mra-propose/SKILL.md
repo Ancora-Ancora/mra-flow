@@ -1,0 +1,28 @@
+---
+name: mra-propose
+description: Use when a grilled idea is ready to become an OpenSpec change in the low-and-slow orchestrator - phase 2 of the mra-flow workflow.
+disable-model-invocation: true
+argument-hint: <change-id or short description>
+---
+
+# mra-propose — phase 2: OpenSpec change and artifacts
+
+Create the OpenSpec change for `$ARGUMENTS` with all artifacts of the `mra-flow` schema (proposal, specs, design, tasks).
+
+## Steps
+
+1. **Grilling check.** Look for ADRs in `docs/adr/` and glossary terms in `GLOSSARY.md` that cover this topic. If none do, tell the user and ask: run `/mra-grill` first, or proceed anyway. Wait for the answer.
+2. Call the Skill tool with `openspec-propose`, passing the change id/description and the carried decisions from the `/mra-grill` close summary. Follow it up to its closing prompt; the schema instructions carry the project rules (ADR citations, FE↔BE Contract, `[be]`/`[fe]` tasks with `Depends on:` / `Covers:`).
+3. **Check the result:**
+   - `openspec validate <change-id> --strict` passes.
+   - If the proposal Impact names both repos, `design.md` has a filled `## FE↔BE Contract`.
+   - Every task in `tasks.md` has a `[be]` or `[fe]` tag.
+   - Every spec scenario appears in at least one task's `Covers:` line.
+   Fix any gap via the `openspec-update-change` skill (Skill tool) before going on.
+4. If `design.md` lists **ADR candidates**, offer to record them now (Skill tool: `mattpocock-skills:domain-modeling`).
+5. End with the change id and the next command: `/mra-track <change-id>`. This replaces the next step that `openspec-propose` suggests and that `openspec status` prints (`/opsx:apply`, `openspec instructions apply`): in mra-flow, tasks go to beads before any code.
+
+## Rules
+
+- Never write code or create beads issues in this phase.
+- Do not commit; list the changed files and let the user decide.

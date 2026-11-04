@@ -1,3 +1,12 @@
+# mra-flow
+
+Changes to this repo are made by vibe coding: no specs, no formal plans. Keep the tests green and record only hard-to-reverse decisions in `docs/adr/`.
+
+- Tests: `python3 -m unittest discover -s tests -t .`
+- `payload/orchestrator/<rel>` is installed at `<orchestrator>/<rel>`, `payload/user/<rel>` at `~/.claude/<rel>` (`install.sh --user`); everything outside `payload/` is the installer and its tests.
+- Tests must never touch the real `~/.claude` or git global config: use `tests.support.fake_env`.
+- Python standard library only, Python >= 3.11.
+
 # Project Instructions for AI Agents
 
 This file provides instructions and context for AI coding agents working on this project.
