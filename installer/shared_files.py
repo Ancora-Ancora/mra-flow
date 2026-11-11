@@ -6,8 +6,6 @@ content it does not own: they only add what is missing.
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 from pathlib import Path
 from typing import Iterable
 
@@ -24,7 +22,6 @@ GITIGNORE_LINES = (".worktrees/", "handoff/", ".beads/issues.jsonl")
 # User layer (paths relative to the Claude Code config dir).
 USER_IMPORT_LINE = "@mra-flow/CLAUDE.md"
 HOOK_SCRIPT = "mra-flow/hooks/load-handoff.py"
-GLOBAL_EXCLUDES = ("handoff/",)
 
 
 def hook_entry(claude_dir: Path) -> dict:
@@ -110,12 +107,3 @@ def ensure_lines(path: Path, lines: Iterable[str]) -> bool:
 def ensure_gitignore(root: Path, lines: Iterable[str] = GITIGNORE_LINES) -> bool:
     return ensure_lines(root / ".gitignore", lines)
 
-
-def global_excludes_file() -> Path:
-    """The file git reads for user-wide ignores (core.excludesFile or its XDG default)."""
-    done = subprocess.run(["git", "config", "--global", "--get", "core.excludesFile"],
-                          capture_output=True, text=True)
-    if done.returncode == 0 and done.stdout.strip():
-        return Path(os.path.expanduser(done.stdout.strip()))
-    xdg = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
-    return Path(xdg) / "git" / "ignore"

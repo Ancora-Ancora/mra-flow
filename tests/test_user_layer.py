@@ -31,21 +31,13 @@ class UserLayerTest(TmpTestCase):
         self.assertEqual((self.claude / "CLAUDE.md").read_text(), sf.USER_IMPORT_LINE + "\n")
         settings = json.loads((self.claude / "settings.json").read_text())
         self.assertEqual(settings, {"hooks": {"SessionStart": [sf.hook_entry(self.claude)]}})
-        self.assertIn("handoff/", self.excludes.read_text().splitlines())
+        self.assertFalse(self.excludes.exists())  # the hook ignores handoff/ per repo
 
     def test_user_reinstall_is_noop(self):
         self.user()
         before = snapshot(Path(self.env["HOME"]))
         self.user()
         self.assertEqual(snapshot(Path(self.env["HOME"])), before)
-
-    def test_respects_core_excludes_file(self):
-        custom = Path(self.env["HOME"]) / "my-ignore"
-        custom.write_text("*.swp\n")
-        Path(self.env["GIT_CONFIG_GLOBAL"]).write_text(f"[core]\n\texcludesFile = {custom}\n")
-        self.user()
-        self.assertEqual(custom.read_text().splitlines(), ["*.swp", "", "# mra-flow", "handoff/"])
-        self.assertFalse(self.excludes.exists())
 
     def test_keeps_existing_user_claude_md_and_settings(self):
         self.claude.mkdir(parents=True)

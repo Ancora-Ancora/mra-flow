@@ -23,5 +23,5 @@ These rules override the `handoff` skill's own instructions on where and how to 
 - Save to `handoff/ho-<YYYYMMDD-HHMMSS>.md` at the project root (create `handoff/` if missing), not to `$TMPDIR` or `/tmp`. Get the name from `date +%Y%m%d-%H%M%S`.
 - The file MUST start with this frontmatter, exactly: `---`, `read: false`, `created: <date -Iseconds>`, `---`.
 - Write it in English. In **State**, say what is in flight; for an mra-flow change, give the change id, its phase, the epic id with its `bd epic status` summary, and each worktree's branch and uncommitted changes. Make **Next steps** start with the exact next command (e.g. `/mra-verify <change-id>`).
-- `handoff/` is git-ignored through the global git excludes file: never commit it. Never edit an older handoff, and never set `read: true` yourself.
+- `handoff/` is git-ignored through the repo's `.git/info/exclude`, which the SessionStart hook below fills in: never commit it. Never edit an older handoff, and never set `read: true` yourself.
 - The SessionStart hook `mra-flow/hooks/load-handoff.py` in the Claude Code config dir (on startup, `/clear` and compaction) injects the newest handoff only if it is `read: false`, then marks it `read: true`. Older handoffs are never loaded.

@@ -110,9 +110,6 @@ def install_user(claude_dir: Path, package: Path = PACKAGE_ROOT) -> int:
         notes.append(f"added {sf.USER_IMPORT_LINE} to {claude_dir / 'CLAUDE.md'}")
     if sf.merge_settings(claude_dir / "settings.json", hook=sf.hook_entry(claude_dir)):
         notes.append(f"added the handoff hook to {claude_dir / 'settings.json'}")
-    excludes = sf.global_excludes_file()
-    if sf.ensure_lines(excludes, sf.GLOBAL_EXCLUDES):
-        notes.append(f"git-ignored handoff/ globally in {excludes}")
 
     _report(claude_dir, version, manifest, actions, notes, [], [
         "start a new Claude Code session to load the conventions",

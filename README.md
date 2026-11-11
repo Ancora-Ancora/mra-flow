@@ -82,12 +82,12 @@ Restart Claude Code after installing. To upgrade later: `claude plugin marketpla
 
 ```bash
 gh repo clone Ancora-Ancora/mra-flow ~/.cache/mra-flow
-git -C ~/.cache/mra-flow checkout v0.1.3
+git -C ~/.cache/mra-flow checkout v0.1.4
 ~/.cache/mra-flow/install.sh --user              # once per machine
 ~/.cache/mra-flow/install.sh <orchestrator-dir>  # per orchestrator
 ```
 
-`--user` copies `mra-flow/` and `agents/Explore.md` into the Claude Code config dir, adds `@mra-flow/CLAUDE.md` to its `CLAUDE.md` and the handoff hook to its `settings.json`, and git-ignores `handoff/` in the global excludes file (`core.excludesFile`, or `~/.config/git/ignore`).
+`--user` copies `mra-flow/` and `agents/Explore.md` into the Claude Code config dir, adds `@mra-flow/CLAUDE.md` to its `CLAUDE.md` and the handoff hook to its `settings.json`. The hook also git-ignores `handoff/` in each repo it runs in, through the repo's `.git/info/exclude` (shared by its worktrees), so the rule holds wherever Claude Code runs, a rebuilt dev container included.
 
 For an orchestrator, the installer refuses, changing nothing, if a file it would install already exists with different content. Otherwise it:
 
