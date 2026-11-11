@@ -2,7 +2,7 @@
 
 A spec-driven workflow for projects split across several code repos: an **orchestrator** repo holds the specs (OpenSpec), decisions, issues (beads) and the `mra-*` Claude Code skills; the code repos are cloned inside it. This repo packages it in two layers:
 
-- **user** (`install.sh --user`, once per machine): personal conventions for every project, orchestrator or not: handoff rules and the SessionStart hook that loads the latest handoff, language, memory, task tracking. Installed into the Claude Code config dir (`~/.claude`, or `$CLAUDE_CONFIG_DIR`).
+- **user** (`install.sh --user`, once per machine): personal conventions for every project, orchestrator or not: handoff rules and the SessionStart hook that loads the latest handoff, language, memory, task tracking, and an `Explore` subagent (read-only search on Haiku) that overrides the built-in one. Installed into the Claude Code config dir (`~/.claude`, or `$CLAUDE_CONFIG_DIR`).
 - **orchestrator** (`install.sh <dir>`, per orchestrator): the custom OpenSpec workflow: `mra-*` skills, the `mra-flow` schema, `mra-repo`, docs.
 
 ## Setup from scratch
@@ -82,12 +82,12 @@ Restart Claude Code after installing. To upgrade later: `claude plugin marketpla
 
 ```bash
 gh repo clone Ancora-Ancora/mra-flow ~/.cache/mra-flow
-git -C ~/.cache/mra-flow checkout v0.1.2
+git -C ~/.cache/mra-flow checkout v0.1.3
 ~/.cache/mra-flow/install.sh --user              # once per machine
 ~/.cache/mra-flow/install.sh <orchestrator-dir>  # per orchestrator
 ```
 
-`--user` copies `mra-flow/` into the Claude Code config dir, adds `@mra-flow/CLAUDE.md` to its `CLAUDE.md` and the handoff hook to its `settings.json`, and git-ignores `handoff/` in the global excludes file (`core.excludesFile`, or `~/.config/git/ignore`).
+`--user` copies `mra-flow/` and `agents/Explore.md` into the Claude Code config dir, adds `@mra-flow/CLAUDE.md` to its `CLAUDE.md` and the handoff hook to its `settings.json`, and git-ignores `handoff/` in the global excludes file (`core.excludesFile`, or `~/.config/git/ignore`).
 
 For an orchestrator, the installer refuses, changing nothing, if a file it would install already exists with different content. Otherwise it:
 

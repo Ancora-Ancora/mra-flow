@@ -26,6 +26,7 @@ class UserLayerTest(TmpTestCase):
         hook = self.claude / sf.HOOK_SCRIPT
         self.assertTrue(os.access(hook, os.X_OK))
         self.assertTrue((self.claude / "mra-flow/CLAUDE.md").is_file())
+        self.assertTrue((self.claude / "agents/Explore.md").is_file())
         self.assertEqual(rc.load_manifest(self.claude, rc.USER_STATE).version, "0.1.0")
         self.assertEqual((self.claude / "CLAUDE.md").read_text(), sf.USER_IMPORT_LINE + "\n")
         settings = json.loads((self.claude / "settings.json").read_text())
@@ -53,6 +54,15 @@ class UserLayerTest(TmpTestCase):
         self.user()
         self.assertTrue((self.claude / "CLAUDE.md").read_text().startswith("# Me\nBe terse.\n"))
         self.assertEqual(json.loads((self.claude / "settings.json").read_text())["model"], "opus")
+
+    def test_adopts_identical_explore_agent(self):
+        agent = self.claude / "agents/Explore.md"
+        agent.parent.mkdir(parents=True)
+        agent.write_bytes((self.pkg / "payload/user/agents/Explore.md").read_bytes())
+        (self.claude / "agents/Mine.md").write_text("my own agent\n")
+        self.user()
+        self.assertIn("agents/Explore.md", rc.load_manifest(self.claude, rc.USER_STATE).files)
+        self.assertEqual((self.claude / "agents/Mine.md").read_text(), "my own agent\n")
 
     def test_user_conflict_refuses(self):
         (self.claude / "mra-flow").mkdir(parents=True)

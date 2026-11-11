@@ -2,7 +2,7 @@
 
 Two layers: `install.py <orchestrator-dir>` installs the OpenSpec workflow into an
 orchestrator; `install.py --user` installs the personal harness conventions
-(handoff hook and rules, language, memory) into the Claude Code config dir.
+(handoff hook and rules, language, memory, the Explore agent) into the Claude Code config dir.
 """
 from __future__ import annotations
 
