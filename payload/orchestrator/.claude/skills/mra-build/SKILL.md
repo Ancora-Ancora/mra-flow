@@ -37,6 +37,7 @@ Only create worktrees for repos that have tasks (a `repo:<key>` label on an open
    - **review packages:** SDD's `scripts/` resolve the git repo from the current directory. Run `sdd-workspace` from the orchestrator root (the workspace lives there, next to `plan.md`), but run `review-package` from inside the task's worktree, with the 4th argument `OUTFILE` set to `<workspace>/review-<base7>..<head7>.diff`.
    - **when the ledger records `Task N: complete`:** `bd close <bd-id> --reason "<summary>; commit <sha>"`.
    - **on resume after compaction:** for each `Task N: complete` in the ledger whose issue is still open, close it; never re-dispatch a completed task.
+   - **progress bar:** see *Progress bar* below; print it at every step listed there.
 6. **Final review, per repo.** Where SDD runs its final whole-branch review, run one per touched worktree (branch `change/<change-id>` against the code repo's default branch), each on the most capable model. File each finding before fixing it, so the fix commit can cite a beads id:
    - a finding fixed in this change → `bd create "<finding>" -t bug --parent <epic> -l repo:<key> --deps discovered-from:<epic>`; commit message `<bug-id> <change-id>: <summary>`;
    - a finding parked as minor → `bd create "<finding>" -t task -l repo:<key>,needs-triage --deps discovered-from:<epic>`, outside the epic, so it does not block archive.
@@ -46,6 +47,18 @@ Only create worktrees for repos that have tasks (a `repo:<key>` label on an open
    - a defect outside the current task: `bd create "<bug>" -t bug --parent <epic> -l repo:<key> --deps discovered-from:<current id>`, then continue;
    - a **spec gap** (the spec or design is wrong, or silent on behaviour a task must decide): stop the task, tell the user, and run the `/mra-update <change-id>` steps (artifacts, then beads reconcile). Then update the stale `plan.md` tasks and resume. Never settle a spec gap in code alone.
 10. When every task issue of the epic is closed, end with the next command: `/mra-verify <change-id>`.
+
+## Progress bar
+
+From plan approval (step 4) until the last task closes, every message the controller writes to the user starts with one progress line, so the user always sees where the build stands:
+
+```
+mra-build <change-id> [████████░░░░░░░░░░░░] 4/10 · Task 5: [<bd-id>] <title> · spec review
+```
+
+- **Fill:** 20 cells; filled cells = `round(20 × closed / total)`, where `closed` and `total` count the epic's children (`bd children <epic>`), so the bar survives compaction and grows when step 6 adds bugs to the epic. Read them from beads, never from memory.
+- **Current task:** the plan task being worked on, with its stage: `claimed` → `implementing` → `spec review` → `quality review` → `fixing review` → `closed`. During step 6 it reads `final review <key>`; with nothing in flight, `idle`.
+- **When:** after plan approval, before each dispatch, after each implementer or reviewer report, after each `bd close`, and on resume after compaction. Print it as plain text (a fenced code block), not through a todo list: beads stays the source of truth.
 
 ## Rules
 
