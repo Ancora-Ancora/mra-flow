@@ -12,6 +12,7 @@ Create the OpenSpec change for `$ARGUMENTS` with all artifacts of the `mra-flow`
 ## Steps
 
 1. **Grilling check.** Look for ADRs in `docs/adr/` and glossary terms in `GLOSSARY.md` that cover this topic. If none do, tell the user and ask: run `/mra-grill` first, or proceed anyway. Wait for the answer.
+   Also check whether `$ARGUMENTS` matches a capability already in `openspec list --specs`. If so, recommend `/mra-drift <capability>` before proceeding and resolving any DRIFT-SPEC it finds first: the proposal must build on the code's real current behaviour, not a possibly stale spec. Proceed if the user declines.
 2. Call the Skill tool with `openspec-propose`, passing the change id/description and the carried decisions from the `/mra-grill` close summary. Follow it up to its closing prompt; the schema instructions carry the project rules (ADR citations, `## Contract:` sections, `[<key>]` tasks with `Depends on:` / `Covers:`).
 3. **Check the result:**
    - `openspec validate <change-id> --strict` passes.

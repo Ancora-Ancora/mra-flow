@@ -43,6 +43,13 @@ Rules:
 - Write code only in `.worktrees/<change-id>/<key>` (or `.worktrees/hotfix-<bd-id>/<key>` for `/mra-hotfix`), never in this repo and never on the code repos' main branch.
 - The other `/opsx:*` and `/mattpocock-skills:*` commands stay available for one-off use; the `mra-*` commands are the default path.
 
+### Spec drift
+
+`openspec/specs/` is written once per change; colleagues' other work on the code repos never touches it, so it can go stale.
+
+- Before `/mra-grill` or `/mra-propose` on a capability that already has a spec, run `/mra-drift <capability>` and resolve DRIFT-SPEC items first (both skills ask this on your behalf; you can also run it yourself first).
+- After `/mra-hotfix`, or any manual change that alters specified behaviour, run `/mra-drift <capability>` and sync the spec.
+
 ### How this overrides the beads defaults
 
 The beads context injected by `bd prime` is subordinate to this section (task tracking and memory rules come from the user-level conventions):
