@@ -23,6 +23,7 @@ flowchart LR
     update["/mra-update<br/>any time"]:::phase
     sync["/mra-sync<br/>rare"]:::phase
     hotfix["/mra-hotfix<br/>rare · archived feature"]:::phase
+    drift(["/mra-drift<br/>any time · read-only"]):::optional
     apply["/opsx:apply<br/>✖ blocked"]:::blocked
 
     explore -. decisions to make .-> grill
@@ -35,6 +36,9 @@ flowchart LR
     update -. reconcile beads .-> track
     sync -. specs before archive .-> archive
     hotfix -. spec gap: escalate .-> grill
+    drift -. DRIFT-SPEC .-> propose
+    drift -. DRIFT-CODE, epic open .-> fix
+    drift -. DRIFT-CODE, archived .-> hotfix
     apply -. use instead .-> build
 ```
 
@@ -153,6 +157,9 @@ flowchart LR
     hf3 --> hf4["superpowers:verification-before-completion"]:::sp
     hf4 --> hf5["superpowers:finishing-a-development-branch"]:::sp
     hf5 --> hf6["bd close · note on active change epics"]:::bd
+    dr["/mra-drift"]:::phase --> dr1["git log per owning repo<br/>vs. origin/#lt;default-branch#gt;"]:::sp
+    dr1 --> dr2["classify: ALIGNED · DRIFT-SPEC · DRIFT-CODE · UNVERIFIABLE · UNSPECIFIED"]:::os
+    dr2 --> drA["drift report<br/>→ /mra-propose or /mra-fix or /mra-hotfix, on confirmation"]
 ```
 
 ## 3. Session continuity
