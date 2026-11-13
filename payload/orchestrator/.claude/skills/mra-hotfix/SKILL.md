@@ -33,7 +33,8 @@ One bug, one cycle: track, isolate, diagnose, fix test-first, verify, integrate.
 7. **Integrate.** Per touched repo, in integration order (`.mra-flow/bin/mra-repo list`: dependencies first), call the Skill tool with `superpowers:finishing-a-development-branch` and let the user choose (merge locally, push + PR, keep). If a push needs credentials, look for notes with `bd memories push`. "Keep" → stop here; the issue stays in progress.
 8. **Close:** `bd close <id> --reason "<root cause + fix>; <repo>: <sha/PR>"`.
 9. **Notify active changes.** For each integrated repo, list its `change/*` worktrees (`git -C <path> worktree list`). For each such change, find its epic (`bd list -t epic -l openspec:<change-id>`) and append: `bd update <epic> --append-notes "hotfix <id> merged into <repo> main <sha>: merge main into change/<change-id> before /mra-verify"`. Leave the change branches untouched.
-10. End with a summary: root cause, fix, verify evidence, integration per repo, epics notified.
+10. **Spec drift check.** The fix just changed code behind `<capability>`'s main spec. Recommend `/mra-drift <capability>` to confirm the spec still matches after the fix; the user decides whether to run it now or later.
+11. End with a summary: root cause, fix, verify evidence, integration per repo, epics notified.
 
 ## Escalate
 

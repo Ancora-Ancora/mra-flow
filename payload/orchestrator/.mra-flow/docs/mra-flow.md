@@ -36,6 +36,9 @@ flowchart LR
     update -. reconcile beads .-> track
     sync -. specs before archive .-> archive
     hotfix -. spec gap: escalate .-> grill
+    hotfix -. fix closed .-> drift
+    grill -. existing capability .-> drift
+    propose -. existing capability .-> drift
     drift -. DRIFT-SPEC .-> propose
     drift -. DRIFT-CODE, epic open .-> fix
     drift -. DRIFT-CODE, archived .-> hotfix
