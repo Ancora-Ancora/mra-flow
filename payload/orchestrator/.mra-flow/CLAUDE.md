@@ -33,6 +33,7 @@ Every feature goes through the `mra-flow` workflow (diagram: `.mra-flow/docs/mra
 | any time | `/mra-update <change-id>` | revised artifacts, beads reconciled |
 | rare | `/mra-sync <change-id>` | delta specs merged into main specs before archive |
 | rare | `/mra-hotfix <bd-id \| bug>` | bug in an archived feature fixed test-first, verified and integrated |
+| any time | `/mra-drift [capability]` | drift report: specs vs. real code, read-only |
 | end of session | `/mattpocock-skills:handoff [next focus]` | `handoff/ho-<datetime>.md` (`read: false`), auto-loaded once by the next session (handoff rules: installed with `install.sh --user`) |
 
 Rules:
