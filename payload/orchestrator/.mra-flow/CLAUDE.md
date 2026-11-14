@@ -8,11 +8,13 @@ This repo is an **orchestrator**. It holds no application code.
 |---|---|---|
 | `openspec/` | specs, changes, the `mra-flow` schema | this repo |
 | `docs/adr/`, `GLOSSARY.md` | architecture decisions and domain language, shared by all code repos | this repo |
+| `docs/research/` | cited research notes from `/mra-research`, the evidence ADRs and designs point at | this repo |
 | `.beads/` | the beads issue database for all code repos | this repo |
 | `.claude/skills/mra-*`, `.mra-flow/` | the workflow skills, hook, docs and `mra-repo`, installed by mra-flow | this repo |
 | `mra-flow.toml` | the repo registry: one `[repos.<key>]` table per code repo, with `path`, `remote`, `description`, `depends_on` | this repo |
 | each repo's `path` | a code repo | separate repo, git-ignored here |
 | `.worktrees/<change-id>/<key>` | per-change worktrees of the code repos, branch `change/<change-id>` | git-ignored here |
+| `.worktrees/proto-<slug>/<key>` | throwaway prototype worktrees, branch `prototype/<slug>`, removed after the verdict | git-ignored here |
 
 Build, test and stack conventions live in each code repo's own `CLAUDE.md`. `.mra-flow/bin/mra-repo list` prints the code repos in integration order (dependencies first); `mra-repo add` declares a new one and `mra-repo clone` restores missing clones.
 
@@ -34,13 +36,15 @@ Every feature goes through the `mra-flow` workflow (diagram: `.mra-flow/docs/mra
 | rare | `/mra-sync <change-id>` | delta specs merged into main specs before archive |
 | rare | `/mra-hotfix <bd-id \| bug>` | bug in an archived feature fixed test-first, verified and integrated |
 | any time | `/mra-drift [capability]` | drift report: specs vs. real code, read-only |
+| when stuck on a fact | `/mra-research <question> [--change <id>]` | cited note in `docs/research/` |
+| when stuck on design | `/mra-prototype <question>` | verdict as ADR or carried decision; prototype kept on branch `prototype/<slug>` |
 | end of session | `/mattpocock-skills:handoff [next focus]` | `handoff/ho-<datetime>.md` (`read: false`), auto-loaded once by the next session (handoff rules: installed with `install.sh --user`) |
 
 Rules:
 
 - Never implement through `/opsx:apply` or the `openspec-apply-change` skill: implementation is `/mra-build`.
 - An `mra-*` command whose argument is a question instead of what its argument hint asks for gets an answer in the context of the current phase; the phase is not restarted.
-- Write code only in `.worktrees/<change-id>/<key>` (or `.worktrees/hotfix-<bd-id>/<key>` for `/mra-hotfix`), never in this repo and never on the code repos' main branch.
+- Write code only in `.worktrees/<change-id>/<key>` (or `.worktrees/hotfix-<bd-id>/<key>` for `/mra-hotfix`, `.worktrees/proto-<slug>/<key>` for `/mra-prototype`), never in this repo and never on the code repos' main branch.
 - The other `/opsx:*` and `/mattpocock-skills:*` commands stay available for one-off use; the `mra-*` commands are the default path.
 
 ### Spec drift
@@ -56,7 +60,7 @@ The beads context injected by `bd prime` is subordinate to this section (task tr
 
 - **When issues are created:** only in `/mra-track`, `/mra-build`, `/mra-verify`, `/mra-fix`, `/mra-hotfix` and `/mra-update`. Exploring, grilling and proposing create no issues.
 - **Creating issues:** sequentially, from the skill doing the work; no parallel subagents for issue creation.
-- **Commit authority:** invoking `/mra-build` or `/mra-fix` authorizes commits on the `change/<change-id>` branches inside `.worktrees/`. Invoking `/mra-hotfix` authorizes commits on its `hotfix/<bd-id>` branches. Push, merge and PRs happen only in `/mra-archive` and at the end of `/mra-hotfix`, with the user choosing the option per repo. Commits in this orchestrator repo always need the user's confirmation.
+- **Commit authority:** invoking `/mra-build` or `/mra-fix` authorizes commits on the `change/<change-id>` branches inside `.worktrees/`. Invoking `/mra-hotfix` authorizes commits on its `hotfix/<bd-id>` branches. Invoking `/mra-prototype` authorizes commits on its `prototype/<slug>` branch, which is never merged or pushed. Push, merge and PRs happen only in `/mra-archive` and at the end of `/mra-hotfix`, with the user choosing the option per repo. Commits in this orchestrator repo always need the user's confirmation.
 
 ## Agent skills
 
