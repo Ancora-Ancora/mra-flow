@@ -20,8 +20,9 @@ Prove the change does what its specs say, in each touched repo and across the co
 7. **File findings.** For each real finding (after applying `superpowers:receiving-code-review` judgement):
    ```bash
    bd create "<finding>" -t bug --parent <epic> -l repo:<key>,verify \
-     --deps discovered-from:<epic> -d "<evidence: command, output, file:line>"
+     -d "<evidence: command, output, file:line>"
    ```
+   Do not add `--deps discovered-from:<epic>`: `--parent` already links the epic, and bd rejects a second dependency on the same issue.
 8. Record the outcome: `bd update <epic> --append-notes "verify <date>: PASS|FAIL, <n> bugs, <commands run>"`.
 9. End with a pass/fail table per check, then the next command: `/mra-fix <change-id>` if bugs are open, else `/mra-archive <change-id>`.
 
