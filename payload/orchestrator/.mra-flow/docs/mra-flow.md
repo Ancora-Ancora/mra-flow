@@ -2,18 +2,20 @@
 
 The workflow of this orchestrator: which command to run in which phase, which skills each command calls, and what it leaves behind. Source of truth for the rules: `CLAUDE.md` (section *Workflow*) and `.claude/skills/mra-*`.
 
-Colours: blue = `mra-*` command · green = superpowers · yellow = mattpocock-skills · purple = OpenSpec · red = beads (`bd`) · orange = hook · white dashed = artifact · white solid = plain step.
+Colours: grey = `mra-*` command · yellow = `mra-*` command wrapping a mattpocock skill · light blue = mattpocock-skills · green = superpowers · purple = OpenSpec · red = beads (`bd`) · orange = hook · white dashed = artifact · white solid = plain step.
 
 ## 1. Phases
 
 ```mermaid
 flowchart LR
-    classDef phase fill:#a5d8ff,stroke:#1e1e1e,color:#1e1e1e
-    classDef optional fill:#a5d8ff,stroke:#1e1e1e,stroke-dasharray:5 5,color:#1e1e1e
+    classDef phase fill:#dee2e6,stroke:#1e1e1e,color:#1e1e1e
+    classDef mpwrap fill:#ffec99,stroke:#1e1e1e,color:#1e1e1e
+    classDef optional fill:#dee2e6,stroke:#1e1e1e,stroke-dasharray:5 5,color:#1e1e1e
+    classDef mpwrapopt fill:#ffec99,stroke:#1e1e1e,stroke-dasharray:5 5,color:#1e1e1e
     classDef blocked fill:#ffe3e3,stroke:#e03131,color:#e03131
 
     explore(["/mra-explore<br/>optional"]):::optional
-    grill["/mra-grill<br/>1 · grill"]:::phase
+    grill["/mra-grill<br/>1 · grill"]:::mpwrap
     propose["/mra-propose<br/>2 · propose"]:::phase
     track["/mra-track<br/>3 · track"]:::phase
     build["/mra-build<br/>4 · build"]:::phase
@@ -24,8 +26,8 @@ flowchart LR
     sync["/mra-sync<br/>rare"]:::phase
     hotfix["/mra-hotfix<br/>rare · archived feature"]:::phase
     drift(["/mra-drift<br/>any time · read-only"]):::optional
-    proto(["/mra-prototype<br/>stuck on design"]):::optional
-    research(["/mra-research<br/>stuck on a fact"]):::optional
+    proto(["/mra-prototype<br/>stuck on design"]):::mpwrapopt
+    research(["/mra-research<br/>stuck on a fact"]):::mpwrapopt
     apply["/opsx:apply<br/>✖ blocked"]:::blocked
 
     explore -. decisions to make .-> grill
@@ -63,9 +65,10 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    classDef phase fill:#a5d8ff,stroke:#1e1e1e,color:#1e1e1e
+    classDef phase fill:#dee2e6,stroke:#1e1e1e,color:#1e1e1e
+    classDef mpwrap fill:#ffec99,stroke:#1e1e1e,color:#1e1e1e
     classDef sp fill:#b2f2bb,stroke:#1e1e1e,color:#1e1e1e
-    classDef mp fill:#ffec99,stroke:#1e1e1e,color:#1e1e1e
+    classDef mp fill:#a5d8ff,stroke:#1e1e1e,color:#1e1e1e
     classDef os fill:#d0bfff,stroke:#1e1e1e,color:#1e1e1e
     classDef bd fill:#ffc9c9,stroke:#1e1e1e,color:#1e1e1e
     classDef art fill:#f8f9fa,stroke:#495057,stroke-dasharray:4 4,color:#1e1e1e
@@ -77,7 +80,7 @@ flowchart TB
     end
     subgraph GR["/mra-grill"]
         direction TB
-        gr["/mra-grill"]:::phase --> gr1["mattpocock-skills:grilling"]:::mp
+        gr["/mra-grill"]:::mpwrap --> gr1["mattpocock-skills:grilling"]:::mp
         gr --> gr2["mattpocock-skills:domain-modeling"]:::mp
         gr1 & gr2 --> grA["GLOSSARY.md<br/>docs/adr/NNNN-*.md<br/>carried decisions → /mra-propose"]:::art
     end
@@ -102,9 +105,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef phase fill:#a5d8ff,stroke:#1e1e1e,color:#1e1e1e
+    classDef phase fill:#dee2e6,stroke:#1e1e1e,color:#1e1e1e
+    classDef mpwrap fill:#ffec99,stroke:#1e1e1e,color:#1e1e1e
     classDef sp fill:#b2f2bb,stroke:#1e1e1e,color:#1e1e1e
-    classDef mp fill:#ffec99,stroke:#1e1e1e,color:#1e1e1e
+    classDef mp fill:#a5d8ff,stroke:#1e1e1e,color:#1e1e1e
     classDef os fill:#d0bfff,stroke:#1e1e1e,color:#1e1e1e
     classDef bd fill:#ffc9c9,stroke:#1e1e1e,color:#1e1e1e
     classDef art fill:#f8f9fa,stroke:#495057,stroke-dasharray:4 4,color:#1e1e1e
@@ -156,9 +160,10 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    classDef phase fill:#a5d8ff,stroke:#1e1e1e,color:#1e1e1e
+    classDef phase fill:#dee2e6,stroke:#1e1e1e,color:#1e1e1e
+    classDef mpwrap fill:#ffec99,stroke:#1e1e1e,color:#1e1e1e
     classDef sp fill:#b2f2bb,stroke:#1e1e1e,color:#1e1e1e
-    classDef mp fill:#ffec99,stroke:#1e1e1e,color:#1e1e1e
+    classDef mp fill:#a5d8ff,stroke:#1e1e1e,color:#1e1e1e
     classDef os fill:#d0bfff,stroke:#1e1e1e,color:#1e1e1e
     classDef bd fill:#ffc9c9,stroke:#1e1e1e,color:#1e1e1e
 
@@ -175,11 +180,11 @@ flowchart LR
     dr["/mra-drift"]:::phase --> dr1["git log per owning repo<br/>vs. origin/#lt;default-branch#gt;"]:::sp
     dr1 --> dr2["classify: ALIGNED · DRIFT-SPEC · DRIFT-CODE · UNVERIFIABLE · UNSPECIFIED"]:::os
     dr2 --> drA["drift report<br/>→ /mra-propose or /mra-fix or /mra-hotfix, on confirmation"]
-    pt["/mra-prototype"]:::phase --> pt1["git worktree<br/>.worktrees/proto-#lt;slug#gt; · branch prototype/#lt;slug#gt;"]:::sp
+    pt["/mra-prototype"]:::mpwrap --> pt1["git worktree<br/>.worktrees/proto-#lt;slug#gt; · branch prototype/#lt;slug#gt;"]:::sp
     pt1 --> pt2["mattpocock-skills:prototype<br/>logic or UI"]:::mp
     pt2 --> pt3["mattpocock-skills:domain-modeling<br/>verdict → ADR or carried decision"]:::mp
     pt3 --> pt4["bd update epic --append-notes<br/>only if the change is tracked"]:::bd
-    rs["/mra-research"]:::phase --> rs1["mattpocock-skills:research<br/>background agent · primary sources"]:::mp
+    rs["/mra-research"]:::mpwrap --> rs1["mattpocock-skills:research<br/>background agent · primary sources"]:::mp
     rs1 --> rsA["docs/research/YYYY-MM-DD-#lt;slug#gt;.md<br/>cited by ADRs and design.md"]
     rs1 --> rs2["bd update epic --append-notes<br/>only with --change"]:::bd
 ```
@@ -188,7 +193,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    classDef mp fill:#ffec99,stroke:#1e1e1e,color:#1e1e1e
+    classDef mp fill:#a5d8ff,stroke:#1e1e1e,color:#1e1e1e
     classDef hook fill:#ffd8a8,stroke:#1e1e1e,color:#1e1e1e
     classDef art fill:#f8f9fa,stroke:#495057,stroke-dasharray:4 4,color:#1e1e1e
 
