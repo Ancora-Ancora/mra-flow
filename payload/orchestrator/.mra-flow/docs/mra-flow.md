@@ -123,7 +123,7 @@ flowchart TB
         bu2 --> bu3["superpowers:subagent-driven-development"]:::sp
         bu3 --> bu4["implementer subagent<br/>+ superpowers:test-driven-development"]:::sub
         bu4 --> bu5["reviewer subagent"]:::sub
-        bu3 -. per task .-> bu6["bd claim · bd close<br/>progress bar: closed/total children"]:::bd
+        bu3 -. per task .-> bu6["bd claim · bd close<br/>progress bars: closed/total children · current task (estimated)"]:::bd
         bu3 -. spec gap .-> bu7["/mra-update"]:::phase
         bu5 --> bu8["final review per repo<br/>findings: bd create bug (epic) · needs-triage (outside)"]:::bd
         bu8 --> bu9["SDD rulings → epic notes"]:::bd

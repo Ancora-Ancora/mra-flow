@@ -39,7 +39,7 @@ Only create worktrees for repos that have tasks (a `repo:<key>` label on an open
    - **on resume after compaction:** for each `Task N: complete` in the ledger whose issue is still open, close it; never re-dispatch a completed task.
    - **progress bar:** see *Progress bar* below; print it at every step listed there.
 6. **Final review, per repo.** Where SDD runs its final whole-branch review, run one per touched worktree (branch `change/<change-id>` against the code repo's default branch), each on the most capable model. File each finding before fixing it, so the fix commit can cite a beads id:
-   - a finding fixed in this change → `bd create "<finding>" -t bug --parent <epic> -l repo:<key> --deps discovered-from:<epic>`; commit message `<bug-id> <change-id>: <summary>`;
+   - a finding fixed in this change → `bd create "<finding>" -t bug --parent <epic> -l repo:<key> -d "Found in the final review of <change-id>: <evidence>"` (no `--deps discovered-from:<epic>`: `--parent` already links the epic, and bd rejects a second dependency on it); commit message `<bug-id> <change-id>: <summary>`;
    - a finding parked as minor → `bd create "<finding>" -t task -l repo:<key>,needs-triage --deps discovered-from:<epic>`, outside the epic, so it does not block archive.
 7. **Save the rulings.** Before SDD deletes its workspace, copy every `Ruling:` line of `<workspace>/progress.md` into the epic: `bd update <epic> --append-notes "SDD rulings: ..."`. The ledger dies with the workspace; the epic keeps the decisions.
 8. **Stop.** After the final reviews, do NOT call `superpowers:finishing-a-development-branch`, even though SDD says to: integration happens in `/mra-archive`, after verify. Leave the worktrees and branches in place.
@@ -50,14 +50,15 @@ Only create worktrees for repos that have tasks (a `repo:<key>` label on an open
 
 ## Progress bar
 
-From plan approval (step 4) until the last task closes, every message the controller writes to the user starts with one progress line, so the user always sees where the build stands:
+From plan approval (step 4) until the last task closes, every message the controller writes to the user starts with one progress line, so the user always sees where the build stands. The line holds two bars side by side: the epic's tasks, then the current task.
 
 ```
-mra-build <change-id> [████████░░░░░░░░░░░░] 4/10 · Task 5: [<bd-id>] <title> · spec review
+mra-build <change-id> tasks [████████░░░░░░░░░░░░] 4/10 · Task 5: [<bd-id>] <title> · task [██████░░░░] ~60% spec review
 ```
 
-- **Fill:** 20 cells; filled cells = `round(20 × closed / total)`, where `closed` and `total` count the epic's children (`bd children <epic>`), so the bar survives compaction and grows when step 6 adds bugs to the epic. Read them from beads, never from memory.
-- **Current task:** the plan task being worked on, with its stage: `claimed` → `implementing` → `spec review` → `quality review` → `fixing review` → `closed`. During step 6 it reads `final review <key>`; with nothing in flight, `idle`.
+- **Tasks bar:** 20 cells; filled cells = `round(20 × closed / total)`, where `closed` and `total` count the epic's children (`bd children <epic>`), so the bar survives compaction and grows when step 6 adds bugs to the epic. Read them from beads, never from memory.
+- **Current task:** the plan task being worked on, with its stage: `claimed` → `implementing` → `spec review` → `quality review` → `fixing review` → `closed`. During step 6 it reads `final review <key>` (or the fix being worked on); with nothing in flight, `idle`.
+- **Task bar:** 10 cells for the current task's own progress, with the percentage after it. The controller cannot see inside a running subagent, so the percentage is an estimate from the stage: `claimed` ~5%, `implementing` 10-50%, `spec review` / `quality review` 60-80%, `fixing review` ~85%, `closed` 100%. Prefix it with `~` while it is an estimate. Refine it as reports arrive (e.g. a fix round lowers it back into the review range), and never let it reach 100% before `bd close`. With nothing in flight, the bar is full after a close and empty when idle before the first dispatch.
 - **When:** after plan approval, before each dispatch, after each implementer or reviewer report, after each `bd close`, and on resume after compaction. Print it as plain text (a fenced code block), not through a todo list: beads stays the source of truth.
 
 ## Rules
