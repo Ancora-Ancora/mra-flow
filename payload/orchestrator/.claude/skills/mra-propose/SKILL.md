@@ -20,7 +20,7 @@ Create the OpenSpec change for `$ARGUMENTS` with all artifacts of the `mra-flow`
    - Every task in `tasks.md` has a `[<key>]` tag naming a repo declared in `mra-flow.toml`.
    - Every spec scenario appears in at least one task's `Covers:` line.
    Fix any gap via the `openspec-update-change` skill (Skill tool) before going on.
-4. If `design.md` lists **ADR candidates**, offer to record them now (Skill tool: `mattpocock-skills:domain-modeling`).
+4. If `design.md` lists **ADR candidates**, offer to record them now (Skill tool: `mattpocock-skills:domain-modeling`). If its open questions include external facts (a library's capability, an API's behaviour, a version difference), offer `/mra-research <question> --change <change-id>` and fold the answers in through `openspec-update-change`.
 5. End with the change id and the next command: `/mra-track <change-id>`. This replaces the next step that `openspec-propose` suggests and that `openspec status` prints (`/opsx:apply`, `openspec instructions apply`): in mra-flow, tasks go to beads before any code.
 
 ## Rules
