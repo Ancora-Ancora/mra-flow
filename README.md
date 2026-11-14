@@ -82,7 +82,7 @@ Restart Claude Code after installing. To upgrade later: `claude plugin marketpla
 
 ```bash
 gh repo clone Ancora-Ancora/mra-flow ~/.cache/mra-flow
-git -C ~/.cache/mra-flow checkout v0.1.5
+git -C ~/.cache/mra-flow checkout v0.1.8
 ~/.cache/mra-flow/install.sh --user              # once per machine
 ~/.cache/mra-flow/install.sh <orchestrator-dir>  # per orchestrator
 ```
@@ -105,7 +105,7 @@ Start a new Claude Code session in the orchestrator and check:
 
 1. **Handoff hook.** Write a handoff (`/mattpocock-skills:handoff`), then `/clear`: the new session gets it injected exactly once, and its frontmatter turns to `read: true`. The hook is registered only in `~/.claude/settings.json`, not in the project's settings.
 2. **Conventions.** `/memory` lists both `~/.claude/mra-flow/CLAUDE.md` and `.mra-flow/CLAUDE.md` as loaded.
-3. **Skills.** Typing `/mra` offers the 12 `mra-*` commands. The agent does not list them among its own skills: they set `disable-model-invocation: true`, so only you can start a phase.
+3. **Skills.** Typing `/mra` offers the 14 `mra-*` commands. The agent does not list them among its own skills: they set `disable-model-invocation: true`, so only you can start a phase.
 4. **Repos.** `.mra-flow/bin/mra-repo list` prints your code repos, dependencies first.
 5. **Plugins.** Typing `/superpowers:` and `/mattpocock-skills:` offers their commands.
 

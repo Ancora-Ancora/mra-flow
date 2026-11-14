@@ -20,6 +20,7 @@ This repo is **single-context**. It is an orchestrator: the glossary and ADRs at
 ├── docs/adr/
 │   ├── 0001-example-decision.md
 │   └── 0002-another-decision.md
+├── docs/research/                  ← cited research notes (/mra-research)
 ├── openspec/
 ├── mra-flow.toml                   ← the code repos and their dependencies
 ├── <repo path>/                    ← separate git repo, one per [repos.<key>]
