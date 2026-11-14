@@ -24,6 +24,8 @@ flowchart LR
     sync["/mra-sync<br/>rare"]:::phase
     hotfix["/mra-hotfix<br/>rare · archived feature"]:::phase
     drift(["/mra-drift<br/>any time · read-only"]):::optional
+    proto(["/mra-prototype<br/>stuck on design"]):::optional
+    research(["/mra-research<br/>stuck on a fact"]):::optional
     apply["/opsx:apply<br/>✖ blocked"]:::blocked
 
     explore -. decisions to make .-> grill
@@ -42,6 +44,16 @@ flowchart LR
     drift -. DRIFT-SPEC .-> propose
     drift -. DRIFT-CODE, epic open .-> fix
     drift -. DRIFT-CODE, archived .-> hotfix
+    grill -. open design question .-> proto
+    update -. open design question .-> proto
+    proto -. verdict .-> grill
+    proto -. verdict .-> update
+    grill -. external fact .-> research
+    propose -. external fact .-> research
+    update -. external fact .-> research
+    research -. cited note .-> grill
+    research -. cited note .-> propose
+    research -. cited note .-> update
     apply -. use instead .-> build
 ```
 
@@ -163,6 +175,13 @@ flowchart LR
     dr["/mra-drift"]:::phase --> dr1["git log per owning repo<br/>vs. origin/#lt;default-branch#gt;"]:::sp
     dr1 --> dr2["classify: ALIGNED · DRIFT-SPEC · DRIFT-CODE · UNVERIFIABLE · UNSPECIFIED"]:::os
     dr2 --> drA["drift report<br/>→ /mra-propose or /mra-fix or /mra-hotfix, on confirmation"]
+    pt["/mra-prototype"]:::phase --> pt1["git worktree<br/>.worktrees/proto-#lt;slug#gt; · branch prototype/#lt;slug#gt;"]:::sp
+    pt1 --> pt2["mattpocock-skills:prototype<br/>logic or UI"]:::mp
+    pt2 --> pt3["mattpocock-skills:domain-modeling<br/>verdict → ADR or carried decision"]:::mp
+    pt3 --> pt4["bd update epic --append-notes<br/>only if the change is tracked"]:::bd
+    rs["/mra-research"]:::phase --> rs1["mattpocock-skills:research<br/>background agent · primary sources"]:::mp
+    rs1 --> rsA["docs/research/YYYY-MM-DD-#lt;slug#gt;.md<br/>cited by ADRs and design.md"]
+    rs1 --> rs2["bd update epic --append-notes<br/>only with --change"]:::bd
 ```
 
 ## 3. Session continuity
