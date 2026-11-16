@@ -56,6 +56,15 @@ class SettingsTest(TmpTestCase):
         self.merge()
         self.assertEqual(self.load()["hooks"]["SessionStart"], [self.hook])
 
+    def test_two_different_hooks_coexist(self):
+        drift = sf.drift_hook_entry(self.tmp)
+        self.merge()
+        sf.merge_settings(self.path(), hook=drift)
+        self.assertEqual(self.load()["hooks"]["SessionStart"], [self.hook, drift])
+        # re-merging the first hook leaves the second alone
+        sf.merge_settings(self.path(), hook=self.hook)
+        self.assertEqual(self.load()["hooks"]["SessionStart"], [self.hook, drift])
+
     def test_plugins_only_adds_no_hooks(self):
         sf.merge_settings(self.path(), plugins=sf.REQUIRED_PLUGINS)
         self.assertNotIn("hooks", self.load())

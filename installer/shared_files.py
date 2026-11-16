@@ -17,7 +17,8 @@ REQUIRED_PLUGINS = (
     "superpowers@claude-plugins-official",
     "mattpocock-skills@claude-plugins-official",
 )
-GITIGNORE_LINES = (".worktrees/", "handoff/", ".beads/issues.jsonl")
+GITIGNORE_LINES = (".worktrees/", "handoff/", ".beads/issues.jsonl", ".mra-flow/drift-state.json")
+DRIFT_HOOK_SCRIPT = ".mra-flow/hooks/check-drift.py"
 
 # User layer (paths relative to the Claude Code config dir).
 USER_IMPORT_LINE = "@mra-flow/CLAUDE.md"
@@ -29,6 +30,14 @@ def hook_entry(claude_dir: Path) -> dict:
     return {
         "matcher": "startup|clear|compact",
         "hooks": [{"type": "command", "command": command, "timeout": 10}],
+    }
+
+
+def drift_hook_entry(root: Path) -> dict:
+    command = f'python3 "{root / DRIFT_HOOK_SCRIPT}"'
+    return {
+        "matcher": "startup|resume",
+        "hooks": [{"type": "command", "command": command, "timeout": 15}],
     }
 
 
@@ -64,7 +73,8 @@ def merge_settings(path: Path, *, hook: dict | None = None,
 
     if hook is not None:
         session_start = settings.setdefault("hooks", {}).setdefault("SessionStart", [])
-        ours = [i for i, e in enumerate(session_start) if _runs_hook_script(e)]
+        marker = _hook_marker(hook)
+        ours = [i for i, e in enumerate(session_start) if _runs_hook_script(e, marker)]
         if ours:
             session_start[:] = [e for i, e in enumerate(session_start) if i not in ours[1:]]
             session_start[ours[0]] = hook
@@ -83,10 +93,18 @@ def merge_settings(path: Path, *, hook: dict | None = None,
     return True
 
 
-def _runs_hook_script(entry: object) -> bool:
+def _hook_marker(hook: dict) -> str:
+    """The script filename a hook runs, used to recognize it across installs that moved
+    the Claude Code config dir or the orchestrator root (the absolute path changes,
+    the filename does not)."""
+    command = hook["hooks"][0]["command"]
+    return Path(command.split('"')[1]).name
+
+
+def _runs_hook_script(entry: object, marker: str) -> bool:
     if not isinstance(entry, dict):
         return False
-    return any(HOOK_SCRIPT in str(h.get("command", ""))
+    return any(marker in str(h.get("command", ""))
                for h in entry.get("hooks", []) if isinstance(h, dict))
 
 

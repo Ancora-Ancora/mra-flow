@@ -80,8 +80,10 @@ def install_orchestrator(root: Path, package: Path = PACKAGE_ROOT) -> int:
 
     if sf.ensure_claude_import(root):
         notes.append(f"added {sf.IMPORT_LINE} to CLAUDE.md")
-    if sf.merge_settings(root / ".claude" / "settings.json", plugins=sf.REQUIRED_PLUGINS):
-        notes.append("enabled the required plugins in .claude/settings.json")
+    if sf.merge_settings(root / ".claude" / "settings.json",
+                        hook=sf.drift_hook_entry(root), plugins=sf.REQUIRED_PLUGINS):
+        notes.append("enabled the required plugins and the spec-drift check hook "
+                     "in .claude/settings.json")
     if sf.ensure_gitignore(root):
         notes.append("updated .gitignore")
     if env.ensure_registry(root):

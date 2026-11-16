@@ -201,4 +201,6 @@ flowchart LR
     ss["SessionStart<br/>startup · clear · compact"]:::hook --> bp["bd prime<br/>beads rules + bd memories"]:::hook
     ss --> lh["load-handoff.py<br/>newest handoff only"]:::hook
     lh -- "if read: false → inject, mark read: true" --> hf
+    ss2["SessionStart<br/>startup · resume"]:::hook --> cd["check-drift.py<br/>per repo: origin/HEAD sha vs. drift-state.json"]:::hook
+    cd -- "sha moved since last check → recommend, don't run" --> dr["/mra-drift"]
 ```
