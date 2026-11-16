@@ -82,7 +82,7 @@ Restart Claude Code after installing. To upgrade later: `claude plugin marketpla
 
 ```bash
 gh repo clone Ancora-Ancora/mra-flow ~/.cache/mra-flow
-git -C ~/.cache/mra-flow checkout v0.1.11
+git -C ~/.cache/mra-flow checkout v0.1.12
 ~/.cache/mra-flow/install.sh --user              # once per machine
 ~/.cache/mra-flow/install.sh <orchestrator-dir>  # per orchestrator
 ```

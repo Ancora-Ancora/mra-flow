@@ -69,11 +69,16 @@ def save_manifest(root: Path, manifest: Manifest, state: str = ORCHESTRATOR_STAT
 
 
 def payload_files(payload: Path) -> dict[str, str]:
-    """Map each payload file's posix relative path to its sha256."""
+    """Map each payload file's posix relative path to its sha256.
+
+    Walks the filesystem, not git: a stray __pycache__ left by running a payload
+    script directly from a dev checkout (e.g. `python3 -m py_compile` while
+    editing a hook) must never ship, even though it is git-ignored and so never
+    committed or released."""
     return {
         p.relative_to(payload).as_posix(): sha256_file(p)
         for p in sorted(payload.rglob("*"))
-        if p.is_file()
+        if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"
     }
 
 

@@ -30,6 +30,13 @@ class ReconcileTest(TmpTestCase):
         self.write(self.payload, "a/x", "1")
         self.assertEqual(self.kinds(), {"a/x": rc.COPY})
 
+    def test_ignores_stray_pycache(self):
+        self.write(self.payload, "hooks/check-drift.py", "print(1)")
+        self.write(self.payload, "hooks/__pycache__/check-drift.cpython-314.pyc", "junk")
+        self.assertEqual(rc.payload_files(self.payload), {
+            "hooks/check-drift.py": self.sha("print(1)"),
+        })
+
     def test_skip_deleted_by_user(self):
         self.write(self.payload, "x", "1")
         self.assertEqual(self.kinds(rc.Manifest("0", {"x": self.sha("1")})), {"x": rc.SKIP_DELETED})
