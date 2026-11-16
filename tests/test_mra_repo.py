@@ -81,6 +81,26 @@ class MraRepoTest(TmpTestCase):
         out = self.run_repo("list").stdout.splitlines()
         self.assertEqual(out, ["be\tproj-be\t", "docs\tdocs\t", "fe\tproj-fe\tbe"])
 
+    def test_ui_paths(self):
+        self.add_be_fe()
+        done = self.run_repo("add", "web", str(self.fe), "--description", "UI", "--path", "web",
+                             "--ui-path", "frontend/", "src/ui/")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(self.registry()["web"]["ui_paths"], ["frontend/", "src/ui/"])
+        self.assertNotIn("ui_paths", self.registry()["be"])
+        self.assertEqual(self.run_repo("ui-paths", "web").stdout.splitlines(), ["frontend/", "src/ui/"])
+        self.assertEqual(self.run_repo("ui-paths", "be").stdout, "")
+        done = self.run_repo("ui-paths", "nope")
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("not declared", done.stderr)
+
+    def test_bad_ui_paths_refused(self):
+        with open(self.orch / "mra-flow.toml", "a") as f:
+            f.write('[repos.a]\npath = "a"\nremote = "r"\ndescription = "d"\nui_paths = "frontend/"\n')
+        done = self.run_repo("list")
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("ui_paths must be a list", done.stderr)
+
     def test_list_cycle_fails(self):
         with open(self.orch / "mra-flow.toml", "a") as f:
             for k, dep in (("a", "b"), ("b", "a")):

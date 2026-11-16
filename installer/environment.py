@@ -38,6 +38,9 @@ REGISTRY_SKELETON = """\
 # remote = "https://github.com/me/my-project-be.git"
 # description = "Backend, owns the HTTP API"
 # depends_on = []
+#
+# Optional: ui_paths = ["frontend/"] lists the paths of a repo's user interface;
+# a change touching them gets browser checks from /mra-qa-ui (mra-repo add --ui-path).
 """
 
 

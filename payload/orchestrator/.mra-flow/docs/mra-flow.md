@@ -20,6 +20,7 @@ flowchart LR
     track["/mra-track<br/>3 · track"]:::phase
     build["/mra-build<br/>4 · build"]:::phase
     verify["/mra-verify<br/>5 · verify"]:::phase
+    qaui(["/mra-qa-ui<br/>verify step · or alone"]):::optional
     fix["/mra-fix<br/>6 · fix"]:::phase
     archive["/mra-archive<br/>7 · archive"]:::phase
     update["/mra-update<br/>any time"]:::phase
@@ -34,6 +35,8 @@ flowchart LR
     explore -. decisions already recorded .-> propose
     grill --> propose --> track --> build --> verify
     verify -- bugs open --> fix
+    verify -. ui_paths touched .-> qaui
+    qaui -. "bugs (qa-ui)" .-> fix
     fix -- re-verify --> verify
     verify -- "PASS, no open bugs" --> archive
     archive -. drift gate .-> drift
@@ -133,8 +136,9 @@ flowchart TB
     subgraph VE["/mra-verify"]
         direction TB
         ve["/mra-verify"]:::phase --> ve1["superpowers:verification-before-completion"]:::sp
-        ve1 --> ve6["contract on live servers<br/>+ page in Playwright Chromium"]:::step
-        ve6 --> ve2["mattpocock-skills:code-review<br/>per repo, lockfiles excluded"]:::mp
+        ve1 --> ve6["contract on live servers"]:::step
+        ve6 --> ve8["/mra-qa-ui steps, if ui_paths touched<br/>1 · project e2e suite<br/>2 · smoke.mjs: pages × roles × viewports, JSON summary<br/>3 · interactive browser, failing/new pages only"]:::phase
+        ve8 --> ve2["mattpocock-skills:code-review<br/>per repo, lockfiles excluded"]:::mp
         ve2 --> ve3["superpowers:receiving-code-review"]:::sp
         ve3 --> ve4["openspec validate --strict"]:::os
         ve4 --> ve7["plan check<br/>tasks.md ↔ epic tasks (task metadata)"]:::step

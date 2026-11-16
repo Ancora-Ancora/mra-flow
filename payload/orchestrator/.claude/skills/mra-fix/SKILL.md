@@ -16,7 +16,7 @@ Fix the change's open bugs one at a time, root cause first, test first.
 3. For each bug, in priority order:
    - `bd update <id> --claim`
    - **Diagnose** in the bug's worktree `.worktrees/<change-id>/<key>`, with the skill chosen by the table below. Find the root cause before any fix; record it with `bd update <id> --append-notes "debug skill: <name>; root cause: ..."`.
-   - **Fix:** call the Skill tool with `superpowers:test-driven-development`. If diagnosis already produced a failing test that reproduces the bug, that test is the RED step: reuse it, do not write a second one. Otherwise write it first. Then the minimal fix, then green.
+   - **Fix:** call the Skill tool with `superpowers:test-driven-development`. If diagnosis already produced a failing test that reproduces the bug, that test is the RED step: reuse it, do not write a second one. Otherwise write it first. For a `qa-ui` bug, write the RED test at the lowest level that reproduces it: a component/unit test first, an e2e test only when the defect needs the full app. Then the minimal fix, then green.
    - Commit citing `<id>` and `<change-id>`; `bd close <id> --reason "<root cause + fix, commit sha>"`.
    - A new defect discovered on the way: file it with `--deps discovered-from:<id>`, do not fold it in.
 4. Repeat step 2 until no bug is ready.
@@ -35,6 +35,7 @@ Call the Skill tool with `mattpocock-skills:diagnosing-bugs` if **any** of these
 | A failing test cannot be written from the bug description on the first attempt | needs its repro-building techniques |
 | It is a regression (worked before, a known commit or version) | needs a bisection harness |
 | It spans a contract between two code repos and needs an end-to-end repro | needs curl / headless-browser loops |
+| It is labelled `qa-ui` and the smoke summary or screenshot does not point at the cause | needs a headless-browser repro loop |
 
 **Switch mid-way:** if `systematic-debugging` has rejected 3 hypotheses without finding the root cause, stop it and call `mattpocock-skills:diagnosing-bugs`, carrying over what was ruled out. Record the switch in the bug notes.
 

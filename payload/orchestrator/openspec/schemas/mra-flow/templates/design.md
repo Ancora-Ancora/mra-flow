@@ -20,6 +20,10 @@
 
 <!-- One section per touched repo whose depends_on dependency is touched too (keys from mra-flow.toml): endpoints, payloads, status codes, error shapes, auth, or the equivalent. If no such pair is touched, keep a single "## Contract" section with "N/A - no dependent repos touched" -->
 
+## UI
+
+<!-- Only if the change touches a repo's ui_paths: one bullet per screen, "<route> - roles: <...> - states: <...> - viewports: desktop|mobile". /mra-qa-ui checks these. Omit otherwise -->
+
 ## Risks / Trade-offs
 
 <!-- Known risks and trade-offs -->

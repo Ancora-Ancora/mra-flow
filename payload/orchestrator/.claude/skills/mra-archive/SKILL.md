@@ -14,6 +14,7 @@ Integrate each repo's branch, then archive the OpenSpec change and close the bea
 1. **Preconditions** (stop and report if any fails):
    - every child of the epic is closed: `bd list --parent <epic> --status open,in_progress,blocked` is empty;
    - the epic's last `verify` note says PASS and is newer than the last fix;
+   - that note's `qa-ui:` is PASS or `SKIPPED (no UI paths touched)`; any other SKIPPED reason needs the user's explicit acceptance, recorded with `bd update <epic> --append-notes "qa-ui skip accepted: <reason>"`;
    - the *Plan check* of `/mra-track` reports no mismatch (ticked checkboxes aside, there are none yet);
    - the *Drift gate* below passes.
 

@@ -82,7 +82,7 @@ Restart Claude Code after installing. To upgrade later: `claude plugin marketpla
 
 ```bash
 gh repo clone Ancora-Ancora/mra-flow ~/.cache/mra-flow
-git -C ~/.cache/mra-flow checkout v0.1.15
+git -C ~/.cache/mra-flow checkout v0.1.16
 ~/.cache/mra-flow/install.sh --user              # once per machine
 ~/.cache/mra-flow/install.sh <orchestrator-dir>  # per orchestrator
 ```
@@ -121,12 +121,15 @@ Files you edited locally are left alone and listed in the report; they stay flag
 ## Code repos
 
 ```bash
-.mra-flow/bin/mra-repo add <key> <remote> --description "..." [--depends-on <key> ...] [--path DIR]
+.mra-flow/bin/mra-repo add <key> <remote> --description "..." [--depends-on <key> ...] [--path DIR] [--ui-path PATH ...]
 .mra-flow/bin/mra-repo clone   # after a fresh clone of the orchestrator: clone missing repos
 .mra-flow/bin/mra-repo list    # key, path, depends_on, in integration order
+.mra-flow/bin/mra-repo ui-paths <key>   # the repo's UI paths (none: no UI)
 ```
 
 `add` clones the repo, git-ignores it and appends a `[repos.<key>]` table to `mra-flow.toml`. The key is used as task tag `[key]`, beads label `repo:key` and worktree `.worktrees/<change-id>/<key>`.
+
+`ui_paths` (set with `--ui-path`, or by hand in the repo's table, e.g. `ui_paths = ["frontend/"]`) marks a repo's user interface: a change touching it gets browser checks from `/mra-qa-ui` during `/mra-verify` (ADR-0007). Those need Playwright and Chromium where the checks run: `npm i --no-save playwright@<version>`, `npx playwright install chromium`, and on Linux the browser's system libraries, `sudo npx playwright install-deps chromium` (bake them into the dev container image). Per project, record with `bd remember --key qa-ui-<key>` how to start the app, its base URL, how each role logs in (environment variable names, never passwords), the e2e suite command and the interactive browser tool.
 
 ## Development
 

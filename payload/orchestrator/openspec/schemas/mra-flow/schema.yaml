@@ -202,6 +202,12 @@ artifacts:
         kinds of interface. It is the source of truth both repos implement
         against. When no such pair is touched, write a single
         `## Contract` section with "N/A - no dependent repos touched".
+      - **UI**: only when the change touches a repo's `ui_paths`
+        (`.mra-flow/bin/mra-repo ui-paths <key>`): one bullet per screen,
+        `<route> - roles: <...> - states: <...> - viewports: <...>`, where
+        states are what the user must see (e.g. empty list, validation error,
+        permission denied) and viewports are `desktop` and/or `mobile`.
+        `/mra-qa-ui` builds its browser checks from it. Omit otherwise.
       - **Risks / Trade-offs**: Known limitations, things that could go wrong. Format: [Risk] → Mitigation
       - **Migration Plan**: Steps to deploy, rollback strategy (if applicable)
       - **Open Questions**: Unknowns that can safely be answered later without
