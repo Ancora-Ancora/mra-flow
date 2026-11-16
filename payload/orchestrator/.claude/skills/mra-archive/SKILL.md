@@ -14,7 +14,19 @@ Integrate each repo's branch, then archive the OpenSpec change and close the bea
 1. **Preconditions** (stop and report if any fails):
    - every child of the epic is closed: `bd list --parent <epic> --status open,in_progress,blocked` is empty;
    - the epic's last `verify` note says PASS and is newer than the last fix;
-   - the *Plan check* of `/mra-track` reports no mismatch (ticked checkboxes aside, there are none yet).
+   - the *Plan check* of `/mra-track` reports no mismatch (ticked checkboxes aside, there are none yet);
+   - the *Drift gate* below passes.
+
+   **Drift gate** (before integrating anything, so a finding can still be absorbed into this change). For each capability under `openspec/changes/<change-id>/specs/` and each repo owning it (the `[<key>]` tags in `tasks.md`):
+   - `git -C <path> fetch`; `base=$(git -C .worktrees/<change-id>/<key> merge-base HEAD origin/<default-branch>)`.
+   - `git -C <path> log $base..origin/<default-branch> --format='%h %an %s' --name-only`, keeping commits by authors other than `git -C <path> config user.name`. None in any repo → the gate passes silently.
+   - A capability not yet in `openspec/specs/` (only ADDED by this change) has no spec to drift from: only the same-files check below applies.
+   - Otherwise run the steps of `.claude/skills/mra-drift/SKILL.md` (it cannot be called through the Skill tool) with arguments `<capability> --since <base> --exclude-change <change-id>`, read-only as that skill requires, then decide:
+     - **block** — a DRIFT-SPEC on a requirement this change's delta MODIFIES, REMOVES or RENAMES → `/mra-update <change-id>` (fold the colleague's behaviour into the delta), then `/mra-verify`;
+     - **block** — a DRIFT-CODE → `bd create -t bug --parent <epic>` and `/mra-fix <change-id>` if this change caused it, else outside the epic with label `needs-triage`; ask the user which;
+     - **block** — a colleague's commit touches a file this change also touches (compare with `git -C .worktrees/<change-id>/<key> diff --name-only $base`) → rebase or merge `origin/<default-branch>` into `change/<change-id>`, then `/mra-verify`;
+     - **pass, with a note** — a DRIFT-SPEC only on requirements this change does not touch → record it in the epic notes and, after step 7, recommend a spec-only sync change as `/mra-drift` step 10 describes.
+
 2. **Integrate each repo.** For each worktree in `.worktrees/<change-id>/`, call the Skill tool with `superpowers:finishing-a-development-branch` and let the user choose (merge locally, push + PR, keep). Integrate the repos in integration order (`.mra-flow/bin/mra-repo list`: dependencies first). Record each outcome (merge sha or PR url).
 3. **Tick tasks.** In `openspec/changes/<change-id>/tasks.md`, tick each checkbox `X.Y` whose beads issue (`bd list --parent <epic> --metadata-field task=X.Y --all`) is closed. All must be ticked; stop if one is not. This is the only time beads status is written into `tasks.md`.
 4. **Archive.** Call the Skill tool with `openspec-archive-change` for `<change-id>` (syncs delta specs into `openspec/specs/`).
@@ -25,4 +37,5 @@ Integrate each repo's branch, then archive the OpenSpec change and close the bea
 ## Rules
 
 - Never archive with open bugs or a stale verify.
+- Never skip the drift gate: colleagues' commits on the default branch never update `openspec/specs/`, and the delta specs merge on top of it.
 - If the user chose "keep" for a repo, stop after step 2: the change is not integrated yet.

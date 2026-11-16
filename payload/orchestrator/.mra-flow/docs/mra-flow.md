@@ -36,6 +36,7 @@ flowchart LR
     verify -- bugs open --> fix
     fix -- re-verify --> verify
     verify -- "PASS, no open bugs" --> archive
+    archive -. drift gate .-> drift
     update -. revise artifacts .-> propose
     update -. reconcile beads .-> track
     sync -. specs before archive .-> archive
@@ -150,7 +151,9 @@ flowchart TB
     end
     subgraph AR["/mra-archive"]
         direction TB
-        ar["/mra-archive"]:::phase --> ar1["superpowers:finishing-a-development-branch<br/>per repo, in integration order"]:::sp
+        ar["/mra-archive"]:::phase --> ar0["drift gate<br/>colleagues' commits since merge-base → /mra-drift --exclude-change"]:::step
+        ar0 -. "blocks: touched requirement · DRIFT-CODE · same files" .-> ar0b["/mra-update · /mra-fix · rebase<br/>→ /mra-verify"]:::phase
+        ar0 --> ar1["superpowers:finishing-a-development-branch<br/>per repo, in integration order"]:::sp
         ar1 --> ar2["openspec-archive-change<br/>syncs specs"]:::os
         ar2 --> ar3["bd close epic"]:::bd
         ar3 --> arA["merge / PR per repo<br/>openspec/specs/ updated · epic closed"]:::art
