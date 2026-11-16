@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""SessionStart hook: notice new commits on the code repos' default branches.
+"""SessionStart hook: notice an empty repo registry, or new commits on a repo.
 
-For each repo in mra-flow.toml, asks the remote (no fetch, no local writes other
-than our own state file) for the SHA its default branch HEAD points to, and
+If mra-flow.toml exists but declares no [repos.*] yet, the orchestrator is not
+really usable: the session is told to recommend `mra-repo add` for each code
+repo, every session, until at least one is declared.
+
+Otherwise, for each repo asks the remote (no fetch, no local writes other than
+our own state file) for the SHA its default branch HEAD points to, and
 compares it with the SHA last seen for that repo. A repo seen for the first
-time is recorded silently: there is nothing yet to compare it with. Otherwise,
-a changed SHA means colleagues' commits may have landed since the last check,
-so openspec/specs/ may be stale; the session is told to recommend /mra-drift,
+time is recorded silently: there is nothing yet to compare it with. A changed
+SHA means colleagues' commits may have landed since the last check, so
+openspec/specs/ may be stale; the session is told to recommend /mra-drift,
 never to run it.
 
 Never fails the session: a missing mra-flow.toml, an unreachable remote or an
@@ -66,10 +70,29 @@ def remote_head_sha(path: pathlib.Path) -> str | None:
     return match.group(1) if match else None
 
 
+def emit(system_message: str, context: str) -> None:
+    json.dump(
+        {
+            "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context},
+            "systemMessage": system_message,
+        },
+        sys.stdout,
+    )
+
+
 def main() -> int:
     root = pathlib.Path(os.environ.get("CLAUDE_PROJECT_DIR") or ".").resolve()
+    if not (root / "mra-flow.toml").is_file():
+        return 0
     repos = load_repos(root)
     if not repos:
+        emit(
+            "mra-flow.toml has no repos declared yet — run mra-repo add",
+            "mra-flow.toml declares no [repos.*] yet (mra-flow SessionStart check-drift hook). "
+            "Tell the user this at the start of the conversation and recommend "
+            '`.mra-flow/bin/mra-repo add <key> <remote> --description "..."` for each code repo; '
+            "do not run it yourself.",
+        )
         return 0
     state = load_state(root)
     changed = []
@@ -89,18 +112,12 @@ def main() -> int:
     if not changed:
         return 0
     repo_list = ", ".join(changed)
-    context = (
+    emit(
+        f"New commits on {repo_list} since the last check — consider /mra-drift",
         f"New commits landed on the default branch of: {repo_list} (mra-flow SessionStart "
         "check-drift hook). openspec/specs/ may now be stale for capabilities those repos own. "
         "Tell the user this at the start of the conversation and recommend running /mra-drift "
-        "to check; do not run it yourself."
-    )
-    json.dump(
-        {
-            "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context},
-            "systemMessage": f"New commits on {repo_list} since the last check — consider /mra-drift",
-        },
-        sys.stdout,
+        "to check; do not run it yourself.",
     )
     return 0
 

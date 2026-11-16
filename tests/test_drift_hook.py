@@ -41,6 +41,18 @@ class DriftHookTest(TmpTestCase):
         self.assertEqual(done.stdout, "")
         self.assertFalse((self.orch / ".mra-flow").exists())
 
+    def test_empty_registry_recommends_mra_repo_add(self):
+        self.toml("# mra-flow repo registry: no [repos.*] declared yet\n")
+        done = self.run_hook()
+        payload = json.loads(done.stdout)
+        self.assertIn("mra-repo add", payload["systemMessage"])
+        self.assertIn("mra-repo add", payload["hookSpecificOutput"]["additionalContext"])
+        self.assertFalse((self.orch / ".mra-flow/drift-state.json").exists())
+
+        # repeats every session, unlike the drift notice, which fires once per change
+        again = self.run_hook()
+        self.assertIn("mra-repo add", again.stdout)
+
     def test_first_run_is_silent_and_records_baseline(self):
         self.toml('[repos.be]\npath = "be"\nremote = "x"\ndescription = "d"\n')
         done = self.run_hook()

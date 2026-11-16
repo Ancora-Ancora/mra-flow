@@ -82,7 +82,7 @@ Restart Claude Code after installing. To upgrade later: `claude plugin marketpla
 
 ```bash
 gh repo clone Ancora-Ancora/mra-flow ~/.cache/mra-flow
-git -C ~/.cache/mra-flow checkout v0.1.12
+git -C ~/.cache/mra-flow checkout v0.1.13
 ~/.cache/mra-flow/install.sh --user              # once per machine
 ~/.cache/mra-flow/install.sh <orchestrator-dir>  # per orchestrator
 ```
@@ -108,7 +108,7 @@ Start a new Claude Code session in the orchestrator and check:
 3. **Skills.** Typing `/mra` offers the 14 `mra-*` commands. The agent does not list them among its own skills: they set `disable-model-invocation: true`, so only you can start a phase.
 4. **Repos.** `.mra-flow/bin/mra-repo list` prints your code repos, dependencies first.
 5. **Plugins.** Typing `/superpowers:` and `/mattpocock-skills:` offers their commands.
-6. **Spec-drift check hook.** After a code repo's default branch gets a new commit upstream (push it from another clone, or wait for a colleague's), start a new session (or `/clear`): it tells you new commits landed on that repo and recommends `/mra-drift`, without running it. It is registered in the project's `.claude/settings.json`, not `~/.claude/settings.json`: it needs `mra-flow.toml`, which only exists in an orchestrator.
+6. **Spec-drift check hook.** After a code repo's default branch gets a new commit upstream (push it from another clone, or wait for a colleague's), start a new session (or `/clear`): it tells you new commits landed on that repo and recommends `/mra-drift`, without running it. The same hook also reminds you every session, before any repo is declared, to run `mra-repo add`. It is registered in the project's `.claude/settings.json`, not `~/.claude/settings.json`: it needs `mra-flow.toml`, which only exists in an orchestrator.
 
 ## Update
 

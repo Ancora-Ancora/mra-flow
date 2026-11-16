@@ -16,7 +16,7 @@ This repo is an **orchestrator**. It holds no application code.
 | `.worktrees/<change-id>/<key>` | per-change worktrees of the code repos, branch `change/<change-id>` | git-ignored here |
 | `.worktrees/proto-<slug>/<key>` | throwaway prototype worktrees, branch `prototype/<slug>`, removed after the verdict | git-ignored here |
 
-Build, test and stack conventions live in each code repo's own `CLAUDE.md`. `.mra-flow/bin/mra-repo list` prints the code repos in integration order (dependencies first); `mra-repo add` declares a new one and `mra-repo clone` restores missing clones.
+Build, test and stack conventions live in each code repo's own `CLAUDE.md`. `.mra-flow/bin/mra-repo list` prints the code repos in integration order (dependencies first); `mra-repo add` declares a new one and `mra-repo clone` restores missing clones. Until at least one is declared, a SessionStart hook recommends `mra-repo add` every session, and `/mra-grill`/`/mra-propose` recommend it too before proceeding.
 
 ## Workflow
 
