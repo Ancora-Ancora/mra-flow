@@ -12,7 +12,7 @@ Fix the change's open bugs one at a time, root cause first, test first.
 ## Steps
 
 1. If `$ARGUMENTS` includes a bug description, file it first: `bd create "<bug>" -t bug --parent <epic> -l repo:<key> -d "<repro>"` (ask which repo if unclear).
-2. List work: `bd ready --parent <epic> -t bug`. Empty → go to step 5.
+2. List work: `bd ready --parent <epic> -t bug`, leaving out bugs labelled `plan-drift`: those are not fixed in code but by `/mra-update <change-id>`, which closes them; if any is open, say so. Empty → go to step 5.
 3. For each bug, in priority order:
    - `bd update <id> --claim`
    - **Diagnose** in the bug's worktree `.worktrees/<change-id>/<key>`, with the skill chosen by the table below. Find the root cause before any fix; record it with `bd update <id> --append-notes "debug skill: <name>; root cause: ..."`.

@@ -266,6 +266,11 @@ artifacts:
       - Order tasks by dependency (what must be done first?)
       - Checkboxes are NOT updated during implementation: beads tracks live
         status. They are ticked in one pass at archive time.
+      - Task numbers are stable once tracked: `/mra-track` stores `X.Y` on the
+        task's beads issue, and that number is the only link between them.
+        When revising tasks.md, never renumber an existing task; a new task
+        takes the next free number in its group, and a removed task's number
+        is never reused
       - Track implementation and verification work that can be completed before
         archive. If the requested workflow includes archive or work that requires
         this change to be archived, preserve those steps as plain bullets in an

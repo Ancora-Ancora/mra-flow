@@ -22,5 +22,26 @@ class BdCreateCommandsTest(unittest.TestCase):
         self.assertEqual(offenders, [])
 
 
+SKILLS = PAYLOAD / "orchestrator" / ".claude" / "skills"
+
+
+class PlanCheckTest(unittest.TestCase):
+    def test_shared_plan_check_section_exists_and_is_referenced(self):
+        # mra-update, mra-verify and mra-archive point to the Plan check of
+        # mra-track by its heading: renaming it silently breaks them.
+        track = (SKILLS / "mra-track" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("\n## Plan check\n", track)
+        for skill in ("mra-update", "mra-verify", "mra-archive"):
+            text = (SKILLS / skill / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("*Plan check* of `/mra-track`", text, skill)
+
+    def test_task_issues_carry_task_metadata(self):
+        # The task -> issue link is the `task` metadata, not an append-only
+        # map in the epic notes.
+        track = (SKILLS / "mra-track" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn('--metadata \'{"task":"X.Y"}\'', track)
+        self.assertNotIn("--append-notes \"tasks.md map", track)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -96,8 +96,8 @@ flowchart TB
         direction TB
         tr["/mra-track"]:::phase --> tr1["bd create<br/>epic + 1 issue per task"]:::bd
         tr1 --> tr2["bd dep add"]:::bd
-        tr2 --> tr3["bd dep cycles · bd ready"]:::bd
-        tr3 --> trA["beads epic openspec:#lt;id#gt;<br/>repo:#lt;key#gt; labels"]:::art
+        tr2 --> tr3["bd dep cycles · bd ready · plan check"]:::bd
+        tr3 --> trA["beads epic openspec:#lt;id#gt;<br/>repo:#lt;key#gt; labels · task=X.Y metadata"]:::art
     end
 ```
 
@@ -136,7 +136,8 @@ flowchart TB
         ve6 --> ve2["mattpocock-skills:code-review<br/>per repo, lockfiles excluded"]:::mp
         ve2 --> ve3["superpowers:receiving-code-review"]:::sp
         ve3 --> ve4["openspec validate --strict"]:::os
-        ve4 --> ve5["bd create -t bug"]:::bd
+        ve4 --> ve7["plan check<br/>tasks.md ↔ epic tasks (task metadata)"]:::step
+        ve7 --> ve5["bd create -t bug<br/>plan-drift → /mra-update"]:::bd
         ve5 --> veA["pass/fail report<br/>verify note on the epic"]:::art
     end
     subgraph FX["/mra-fix"]

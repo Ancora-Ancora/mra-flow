@@ -15,13 +15,17 @@ Revise the change's artifacts, then reconcile the work already tracked or built 
 2. If the revision comes from a new hard-to-reverse decision, record it first (Skill tool: `mattpocock-skills:domain-modeling`) so the artifacts can cite the ADR.
 3. Call the Skill tool with `openspec-update-change` for `$ARGUMENTS` and follow it. The `mra-flow` schema rules still apply (`## Contract:` sections, `[<key>]` tags, `Depends on:` / `Covers:`).
 4. `openspec validate <change-id> --strict` passes.
-5. **Reconcile beads** if an epic `openspec:<change-id>` exists (`bd children <epic>`, map in the epic notes):
+5. **Reconcile beads** if an epic `openspec:<change-id>` exists. Tasks and issues are linked by the issue's `task` metadata (`X.Y`); see *Plan check* in `/mra-track`.
+   - **Numbers are stable:** in `tasks.md`, never renumber an existing task. A new task takes the next free number in its group; a removed task's number is never reused. If step 3 renumbered tasks, restore the old numbers before reconciling.
    - new tasks → run the `/mra-track <change-id>` steps (idempotent: creates only what is missing);
-   - removed or rewritten tasks → list the affected issue ids and their status, and ask the user before closing (`bd close <id> --reason "dropped by update: ..."`) or editing them; closed work invalidated by the change becomes a new task, not a reopened one;
-   - changed dependencies → `bd dep add` / `bd dep remove`.
+   - removed tasks → list the affected issue ids and their status, and ask the user, then `bd update <id> --set-metadata dropped=true` and `bd close <id> --reason "dropped by update: ..."`;
+   - rewritten tasks → list the affected issue ids and their status, and ask the user, then update the issue to the new text (`--title`, `--description`, `--acceptance`, labels). Closed work invalidated by the change becomes a new task, not a reopened one;
+   - changed dependencies → `bd dep add` / `bd dep remove`;
+   - finally, run the *Plan check* of `/mra-track`: it must report no mismatch. Close each open `plan-drift` bug of the epic it no longer reports: `bd close <id> --reason "reconciled by update: ..."`.
 6. If `openspec/changes/<change-id>/plan.md` exists, flag the plan tasks the revision makes stale; the plan is updated in `/mra-build` before more work runs.
 7. End with a summary of artifact changes, beads changes, and the next command for the phase the change is in.
 
 ## Rules
 
 - Never edit code here.
+- Never tick `tasks.md` checkboxes here; beads holds live status.
