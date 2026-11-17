@@ -11,7 +11,8 @@ compares it with the SHA last seen for that repo. A repo seen for the first
 time is recorded silently: there is nothing yet to compare it with. A changed
 SHA means colleagues' commits may have landed since the last check, so
 openspec/specs/ may be stale; the session is told to recommend /mra-drift,
-never to run it.
+never to run it. A repo with `drift = false` in its table (out of scope for
+this orchestrator's changes) is never checked.
 
 Never fails the session: a missing mra-flow.toml, an unreachable remote or an
 unreadable state file all end the hook silently.
@@ -97,6 +98,9 @@ def main() -> int:
     state = load_state(root)
     changed = []
     for key, repo in sorted(repos.items()):
+        if repo.get("drift", True) is False:
+            state.pop(key, None)
+            continue
         path = root / repo.get("path", key)
         if not path.is_dir():
             continue

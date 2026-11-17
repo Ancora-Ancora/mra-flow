@@ -11,7 +11,7 @@ This repo is an **orchestrator**. It holds no application code.
 | `docs/research/` | cited research notes from `/mra-research`, the evidence ADRs and designs point at | this repo |
 | `.beads/` | the beads issue database for all code repos | this repo |
 | `.claude/skills/mra-*`, `.mra-flow/` | the workflow skills, hook, docs and `mra-repo`, installed by mra-flow | this repo |
-| `mra-flow.toml` | the repo registry: one `[repos.<key>]` table per code repo, with `path`, `remote`, `description`, `depends_on`, optional `ui_paths` (paths whose changes `/mra-qa-ui` checks in a browser) | this repo |
+| `mra-flow.toml` | the repo registry: one `[repos.<key>]` table per code repo, with `path`, `remote`, `description`, `depends_on`, optional `ui_paths` (paths whose changes `/mra-qa-ui` checks in a browser), optional `drift = false` (out of scope: the drift check hook and `/mra-drift` ignore it) | this repo |
 | each repo's `path` | a code repo | separate repo, git-ignored here |
 | `.worktrees/<change-id>/<key>` | per-change worktrees of the code repos, branch `change/<change-id>` | git-ignored here |
 | `.worktrees/proto-<slug>/<key>` | throwaway prototype worktrees, branch `prototype/<slug>`, removed after the verdict | git-ignored here |

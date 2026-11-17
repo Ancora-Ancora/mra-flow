@@ -131,6 +131,8 @@ Files you edited locally are left alone and listed in the report; they stay flag
 
 `ui_paths` (set with `--ui-path`, or by hand in the repo's table, e.g. `ui_paths = ["frontend/"]`) marks a repo's user interface: a change touching it gets browser checks from `/mra-qa-ui` during `/mra-verify` (ADR-0007). Those need Playwright and Chromium where the checks run: `npm i --no-save playwright@<version>`, `npx playwright install chromium`, and on Linux the browser's system libraries, `sudo npx playwright install-deps chromium` (bake them into the dev container image). Per project, record with `bd remember --key qa-ui-<key>` how to start the app, its base URL, how each role logs in (environment variable names, never passwords), the e2e suite command and the interactive browser tool.
 
+`drift = false` (by hand in the repo's table) marks a repo that is out of scope for this orchestrator's changes, e.g. one only pulled for reference: the spec-drift check hook never reports its new commits, and `/mra-drift` skips it, listing it as not checked.
+
 ## Development
 
 Tests: `python3 -m unittest discover -s tests -t .` (needs only git; fake `bd` and `openspec` are in `tests/fakes/bin`).

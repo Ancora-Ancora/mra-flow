@@ -78,6 +78,15 @@ class DriftHookTest(TmpTestCase):
         quiet = self.run_hook()
         self.assertEqual(quiet.stdout, "")
 
+    def test_repo_with_drift_false_is_never_reported(self):
+        self.toml('[repos.be]\npath = "be"\nremote = "x"\ndescription = "d"\ndrift = false\n')
+        self.run_hook()
+        self.push_new_commit()
+
+        done = self.run_hook()
+        self.assertEqual(done.stdout, "")
+        self.assertNotIn("be", self.state())
+
     def test_missing_clone_is_skipped(self):
         self.toml('[repos.fe]\npath = "fe"\nremote = "x"\ndescription = "d"\n')
         done = self.run_hook()
