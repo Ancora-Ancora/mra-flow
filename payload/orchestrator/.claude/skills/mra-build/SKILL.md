@@ -50,15 +50,16 @@ Only create worktrees for repos that have tasks (a `repo:<key>` label on an open
 
 ## Progress bar
 
-From plan approval (step 4) until the last task closes, every message the controller writes to the user starts with one progress line, so the user always sees where the build stands. The line holds two bars side by side: the epic's tasks, then the current task.
+From plan approval (step 4) until the last task closes, every message the controller writes to the user starts with a two-line progress block, so the user always sees where the build stands: the epic's tasks on the first line, the current task on the second, with both bars starting in the same column.
 
 ```
-mra-build <change-id> tasks [████████░░░░░░░░░░░░] 4/10 · Task 5: [<bd-id>] <title> · task [██████░░░░] ~60% spec review
+Tasks done 4/10   [████████▓░░░░░░░░░░░] mra-build <change-id>
+Current Task 5/10 [████████████░░░░░░░░] ~60% spec review | [<bd-id>] <title>
 ```
 
-- **Tasks bar:** 20 cells; filled cells = `round(20 × closed / total)`, where `closed` and `total` count the epic's children (`bd children <epic>`), so the bar survives compaction and grows when step 6 adds bugs to the epic. Read them from beads, never from memory.
-- **Current task:** the plan task being worked on, with its stage: `claimed` → `implementing` → `spec review` → `quality review` → `fixing review` → `closed`. During step 6 it reads `final review <key>` (or the fix being worked on); with nothing in flight, `idle`.
-- **Task bar:** 10 cells for the current task's own progress, with the percentage after it. The controller cannot see inside a running subagent, so the percentage is an estimate from the stage: `claimed` ~5%, `implementing` 10-50%, `spec review` / `quality review` 60-80%, `fixing review` ~85%, `closed` 100%. Prefix it with `~` while it is an estimate. Refine it as reports arrive (e.g. a fix round lowers it back into the review range), and never let it reach 100% before `bd close`. With nothing in flight, the bar is full after a close and empty when idle before the first dispatch.
+- **Line 1, tasks:** `Tasks done <closed>/<total>`, padded with spaces so its bar starts in the same column as line 2's, then the bar, then `mra-build <change-id>`. The bar has 20 cells: `█` cells = `round(20 × closed / total)`, then one `▓` cell for the task in flight (none when idle). `closed` and `total` count the epic's children (`bd children <epic>`), so the bar survives compaction and grows when step 6 adds bugs to the epic. Read them from beads, never from memory.
+- **Line 2, current task:** `Current Task <N>/<total>` (its plan task number), then its own bar, then the percentage and stage, then `| [<bd-id>] <title>`. Stages: `claimed` → `implementing` → `spec review` → `quality review` → `fixing review` → `closed`. During step 6 it reads `final review <key>` (or the fix being worked on); with nothing in flight, `idle`.
+- **Task bar:** 20 cells, the same length as line 1's bar. The controller cannot see inside a running subagent, so the percentage is an estimate from the stage: `claimed` ~5%, `implementing` 10-50%, `spec review` / `quality review` 60-80%, `fixing review` ~85%, `closed` 100%. Prefix it with `~` while it is an estimate. Refine it as reports arrive (e.g. a fix round lowers it back into the review range), and never let it reach 100% before `bd close`. With nothing in flight, the bar is full after a close and empty when idle before the first dispatch.
 - **When:** after plan approval, before each dispatch, after each implementer or reviewer report, after each `bd close`, and on resume after compaction. Print it as plain text (a fenced code block), not through a todo list: beads stays the source of truth.
 
 ## Rules
