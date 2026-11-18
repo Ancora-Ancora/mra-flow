@@ -7,7 +7,7 @@ This repo is an **orchestrator**. It holds no application code.
 | Path | Holds | Git |
 |---|---|---|
 | `openspec/` | specs, changes, the `mra-flow` schema | this repo |
-| `docs/adr/`, `GLOSSARY.md` | architecture decisions and domain language, shared by all code repos | this repo |
+| `docs/adr/`, `GLOSSARY.md` (multi-context: `docs/GLOSSARY-MAP.md`, `docs/<key>/`) | architecture decisions and domain language: shared by all code repos, or one context per code repo (see Domain docs) | this repo |
 | `docs/research/` | cited research notes from `/mra-research`, the evidence ADRs and designs point at | this repo |
 | `.beads/` | the beads issue database for all code repos | this repo |
 | `.claude/skills/mra-*`, `.mra-flow/` | the workflow skills, hook, docs and `mra-repo`, installed by mra-flow | this repo |
@@ -76,4 +76,4 @@ The five default canonical labels (`needs-triage`, `needs-info`, `ready-for-agen
 
 ### Domain docs
 
-Single-context: one `GLOSSARY.md` + `docs/adr/` at the orchestrator root, shared by all code repos. See `.mra-flow/docs/agents/domain.md`.
+Single-context by default: one `GLOSSARY.md` + `docs/adr/` at the orchestrator root, shared by all code repos. Multi-context when `docs/GLOSSARY-MAP.md` exists: one `GLOSSARY.md` + `adr/` per code repo under `docs/<repo-key>/`, plus the root `docs/adr/` (and, lazily, `docs/GLOSSARY.md`) for decisions/terms spanning repos. See `.mra-flow/docs/agents/domain.md`.

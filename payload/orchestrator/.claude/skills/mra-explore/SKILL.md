@@ -11,7 +11,7 @@ Open-ended exploration of `$ARGUMENTS`, grounded in this orchestrator's domain d
 
 ## Steps
 
-1. Read `GLOSSARY.md`, the ADRs in `docs/adr/` related to the topic, and `openspec list --specs`. Skip silently what does not exist. Use glossary terms in the discussion.
+1. Read the glossaries and the ADRs related to the topic, per the domain-docs layout in use (`.mra-flow/docs/agents/domain.md`), and `openspec list --specs`. Skip silently what does not exist. Use glossary terms in the discussion.
 2. Call the Skill tool with `openspec-explore` and follow it. When investigating code, look in the code repos listed by `.mra-flow/bin/mra-repo list` (or the change's `.worktrees/<change-id>/<key>` if it is being built); each repo's `description` in `mra-flow.toml` says what it owns.
 3. When the exploration converges, end with what was learned and the next command:
    - decisions still need to be made → `/mra-grill <topic>`
