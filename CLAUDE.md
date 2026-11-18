@@ -6,7 +6,6 @@ Changes to this repo are made by vibe coding: no specs, no formal plans. Keep th
 - `payload/orchestrator/<rel>` is installed at `<orchestrator>/<rel>`, `payload/user/<rel>` at `~/.claude/<rel>` (`install.sh --user`); everything outside `payload/` is the installer and its tests.
 - Tests must never touch the real `~/.claude` or git global config: use `tests.support.fake_env`.
 - Python standard library only, Python >= 3.11.
-- After changing the diagrams in `payload/orchestrator/.mra-flow/docs/mra-flow.md`, run `tools/excalidraw/generate.sh` and commit the regenerated `mra-flow.excalidraw` with it (see `tools/excalidraw/README.md`).
 
 # Project Instructions for AI Agents
 

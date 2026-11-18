@@ -1,8 +1,0 @@
-{
-  "private": true,
-  "description": "Regenerates payload/orchestrator/.mra-flow/docs/mra-flow.excalidraw from mra-flow.md",
-  "devDependencies": {
-    "mermaid": "11.4.1",
-    "playwright": "1.49.1"
-  }
-}
