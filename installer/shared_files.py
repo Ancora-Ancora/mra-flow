@@ -17,8 +17,10 @@ REQUIRED_PLUGINS = (
     "superpowers@claude-plugins-official",
     "mattpocock-skills@claude-plugins-official",
 )
-GITIGNORE_LINES = (".worktrees/", "handoff/", ".beads/issues.jsonl", ".mra-flow/drift-state.json")
+GITIGNORE_LINES = (".worktrees/", "handoff/", ".beads/issues.jsonl", ".mra-flow/drift-state.json",
+                   ".mra-flow/update-state.json")
 DRIFT_HOOK_SCRIPT = ".mra-flow/hooks/check-drift.py"
+UPDATE_HOOK_SCRIPT = ".mra-flow/hooks/check-update.py"
 
 # User layer (paths relative to the Claude Code config dir).
 USER_IMPORT_LINE = "@mra-flow/CLAUDE.md"
@@ -35,6 +37,14 @@ def hook_entry(claude_dir: Path) -> dict:
 
 def drift_hook_entry(root: Path) -> dict:
     command = f'python3 "{root / DRIFT_HOOK_SCRIPT}"'
+    return {
+        "matcher": "startup|resume",
+        "hooks": [{"type": "command", "command": command, "timeout": 15}],
+    }
+
+
+def update_hook_entry(root: Path) -> dict:
+    command = f'python3 "{root / UPDATE_HOOK_SCRIPT}"'
     return {
         "matcher": "startup|resume",
         "hooks": [{"type": "command", "command": command, "timeout": 15}],

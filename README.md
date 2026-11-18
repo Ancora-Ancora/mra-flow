@@ -94,7 +94,7 @@ For an orchestrator, the installer refuses, changing nothing, if a file it would
 - copies the package into `.mra-flow/`, `.claude/skills/mra-*/` and `openspec/schemas/mra-flow/`, and records a checksum of each file in `.mra-flow/manifest`;
 - runs `openspec init` if there is no `openspec/` and sets `schema: mra-flow` in `openspec/config.yaml`;
 - runs `bd init --skip-agents` and `bd setup claude` if there is no `.beads/` (note: `bd init` makes a commit), and sets `git config beads.role maintainer`;
-- adds `@.mra-flow/CLAUDE.md` to `CLAUDE.md`, the required plugins and the spec-drift check hook to `.claude/settings.json`, and `.worktrees/`, `handoff/`, `.beads/issues.jsonl`, `.mra-flow/drift-state.json` to `.gitignore`;
+- adds `@.mra-flow/CLAUDE.md` to `CLAUDE.md`, the required plugins and the spec-drift and update check hooks to `.claude/settings.json`, and `.worktrees/`, `handoff/`, `.beads/issues.jsonl`, `.mra-flow/drift-state.json`, `.mra-flow/update-state.json` to `.gitignore`;
 - creates an empty, commented `mra-flow.toml`.
 
 It never rewrites `mra-flow.toml`, `GLOSSARY.md`, `docs/adr/` or `openspec/specs/`. Review the result with `git status` and commit it.
@@ -109,6 +109,8 @@ Start a new Claude Code session in the orchestrator and check:
 4. **Repos.** `.mra-flow/bin/mra-repo list` prints your code repos, dependencies first.
 5. **Plugins.** Typing `/superpowers:` and `/mattpocock-skills:` offers their commands.
 6. **Spec-drift check hook.** After a code repo's default branch gets a new commit upstream (push it from another clone, or wait for a colleague's), start a new session (or `/clear`): it tells you new commits landed on that repo and recommends `/mra-drift`, without running it. The same hook also reminds you every session, before any repo is declared, to run `mra-repo add`. It is registered in the project's `.claude/settings.json`, not `~/.claude/settings.json`: it needs `mra-flow.toml`, which only exists in an orchestrator.
+
+   A second SessionStart hook, `check-update.py`, asks the mra-flow remote (at most once every 24 hours) for its newest `vX.Y.Z` tag and, when it is newer than the installed `.mra-flow/version`, tells you and recommends the update command without running it. Set `MRA_FLOW_REMOTE` to point it at another remote.
 
 ## Update
 

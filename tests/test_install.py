@@ -45,10 +45,12 @@ class InstallTest(TmpTestCase):
         settings = json.loads((self.orch / ".claude/settings.json").read_text())
         self.assertEqual(settings, {
             "enabledPlugins": {p: True for p in sf.REQUIRED_PLUGINS},
-            "hooks": {"SessionStart": [sf.drift_hook_entry(self.orch)]},
+            "hooks": {"SessionStart": [sf.drift_hook_entry(self.orch), sf.update_hook_entry(self.orch)]},
         })
         self.assertFalse((self.orch / "mra-flow/hooks").exists())
         self.assertTrue((self.orch / sf.DRIFT_HOOK_SCRIPT).is_file())
+        self.assertTrue((self.orch / sf.UPDATE_HOOK_SCRIPT).is_file())
+        self.assertIn(".mra-flow/update-state.json", (self.orch / ".gitignore").read_text())
         self.assertEqual(tomllib.loads((self.orch / "mra-flow.toml").read_text()), {})
         self.assertIn("schema: mra-flow", (self.orch / "openspec/config.yaml").read_text())
         self.assertEqual(git(self.orch, "config", "beads.role"), "maintainer")

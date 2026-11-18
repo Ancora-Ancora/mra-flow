@@ -246,4 +246,6 @@ flowchart LR
     ss2["SessionStart<br/>startup · resume"]:::hook --> cd["check-drift.py<br/>no repos yet, or per repo: origin/HEAD sha vs. drift-state.json"]:::hook
     cd -- "no repos registered → recommend, don't run" --> mr["mra-repo add"]
     cd -- "sha moved since last check → recommend, don't run" --> dr["<b class='t'>/mra-drift</b>"]
+    ss2 --> cu["check-update.py<br/>newest vX.Y.Z tag on the remote (once per 24h) vs. .mra-flow/version"]:::hook
+    cu -- "newer release → recommend the update command, don't run" --> up["git checkout vX.Y.Z · install.sh"]
 ```

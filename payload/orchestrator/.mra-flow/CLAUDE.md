@@ -55,6 +55,7 @@ Rules:
 - Before `/mra-grill` or `/mra-propose` on a capability that already has a spec, run `/mra-drift <capability>` and resolve DRIFT-SPEC items first (both skills ask this on your behalf; you can also run it yourself first).
 - After `/mra-hotfix`, or any manual change that alters specified behaviour, run `/mra-drift <capability>` and sync the spec.
 - A SessionStart hook (`.mra-flow/hooks/check-drift.py`) checks the code repos' default branches on every new session and recommends `/mra-drift` when one moved since the last check; it only recommends, never runs it. Its state file, `.mra-flow/drift-state.json`, is local and git-ignored.
+- A second SessionStart hook (`.mra-flow/hooks/check-update.py`) asks the mra-flow remote at most once every 24 hours for its newest release tag and, while it is newer than `.mra-flow/version`, tells the session to recommend the update command (never to run it). Its state file, `.mra-flow/update-state.json`, is local and git-ignored; `MRA_FLOW_REMOTE` overrides the remote.
 
 ### How this overrides the beads defaults
 
