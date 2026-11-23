@@ -12,7 +12,7 @@ This repo is an **orchestrator**. It holds no application code.
 | `docs/prototypes/` | prototype notes and screenshots from `/mra-prototype`: the accepted verdicts `design.md` and `/mra-qa-ui` point at | this repo |
 | `.beads/` | the beads issue database for all code repos | this repo |
 | `.claude/skills/mra-*`, `.mra-flow/` | the workflow skills, hook, docs and `mra-repo`, installed by mra-flow | this repo |
-| `mra-flow.toml` | the repo registry: one `[repos.<key>]` table per code repo, with `path`, `remote`, `description`, `depends_on`, optional `ui_paths` (paths whose changes `/mra-qa-ui` checks in a browser), optional `drift = false` (out of scope: the drift check hook and `/mra-drift` ignore it) | this repo |
+| `mra-flow.toml` | the repo registry: one `[repos.<key>]` table per code repo, with `path`, `remote`, `description`, `depends_on`, optional `ui_paths` (paths whose changes `/mra-qa-ui` checks in a browser), optional `drift = false` (out of scope: the drift check hook and `/mra-drift` ignore it); optional `[integration] command` (how `/mra-archive` and `/mra-hotfix` integrate a repo's branch, instead of `finishing-a-development-branch`) | this repo |
 | each repo's `path` | a code repo | separate repo, git-ignored here |
 | `.worktrees/<change-id>/<key>` | per-change worktrees of the code repos, branch `change/<change-id>` | git-ignored here |
 | `.worktrees/proto-<slug>/<key>` | throwaway prototype worktrees, branch `prototype/<slug>`, removed after the verdict | git-ignored here |
@@ -65,7 +65,7 @@ The beads context injected by `bd prime` is subordinate to this section (task tr
 
 - **When issues are created:** only in `/mra-track`, `/mra-build`, `/mra-verify` (and its `/mra-qa-ui` step), `/mra-fix`, `/mra-hotfix` and `/mra-update`. Exploring, grilling and proposing create no issues.
 - **Creating issues:** sequentially, from the skill doing the work; no parallel subagents for issue creation.
-- **Commit authority:** invoking `/mra-build` or `/mra-fix` authorizes commits on the `change/<change-id>` branches inside `.worktrees/`. Invoking `/mra-hotfix` authorizes commits on its `hotfix/<bd-id>` branches. Invoking `/mra-prototype` authorizes commits on its `prototype/<slug>` branch, which is never merged or pushed. Push, merge and PRs happen only in `/mra-archive` and at the end of `/mra-hotfix`, with the user choosing the option per repo. Commits in this orchestrator repo always need the user's confirmation.
+- **Commit authority:** invoking `/mra-build` or `/mra-fix` authorizes commits on the `change/<change-id>` branches inside `.worktrees/`. Invoking `/mra-hotfix` authorizes commits on its `hotfix/<bd-id>` branches. Invoking `/mra-prototype` authorizes commits on its `prototype/<slug>` branch, which is never merged or pushed. Push, merge and PRs happen only in `/mra-archive` and at the end of `/mra-hotfix`, with the user choosing the option per repo (or, when `mra-flow.toml` declares an `[integration] command`, choosing between that command and keep). Commits in this orchestrator repo always need the user's confirmation.
 
 ## Agent skills
 

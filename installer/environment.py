@@ -41,6 +41,17 @@ REGISTRY_SKELETON = """\
 #
 # Optional: ui_paths = ["frontend/"] lists the paths of a repo's user interface;
 # a change touching them gets browser checks from /mra-qa-ui (mra-repo add --ui-path).
+#
+# Optional: a project-specific integration command, used by /mra-archive and
+# /mra-hotfix instead of superpowers:finishing-a-development-branch (e.g. when
+# every integration must go through a pull request on a non-GitHub host):
+#
+# [integration]
+# command = "scripts/integrate.sh"
+#
+# It runs from the orchestrator root as `<command> <key> <repo-path> <branch>`,
+# must integrate <branch> into the repo's integration branch, print the outcome
+# (merge sha or PR url) as its last line, and exit non-zero on any failure.
 """
 
 

@@ -2,6 +2,7 @@ import shutil
 import subprocess
 import sys
 import tomllib
+from pathlib import Path
 
 from installer.environment import REGISTRY_SKELETON
 from tests.support import REPO_ROOT, TmpTestCase, git, make_bare_remote, make_orchestrator
@@ -100,6 +101,48 @@ class MraRepoTest(TmpTestCase):
         done = self.run_repo("list")
         self.assertEqual(done.returncode, 1)
         self.assertIn("ui_paths must be a list", done.stderr)
+
+    def write_integration(self, command: str) -> Path:
+        script = self.orch / "integrate.py"
+        script.write_text(
+            "import sys\n"
+            "key, path, branch = sys.argv[1:]\n"
+            "print(f'integrating {branch} of {key} at {path}')\n"
+            "print('PR https://example.test/pr/1')\n"
+            "sys.exit(3 if branch == 'bad' else 0)\n")
+        with open(self.orch / "mra-flow.toml", "a") as f:
+            f.write(f"\n[integration]\ncommand = {command!r}\n".replace("'", '"'))
+        return script
+
+    def test_integration_unset(self):
+        self.add_be_fe()
+        done = self.run_repo("integration")
+        self.assertEqual((done.returncode, done.stdout), (0, ""))
+        done = self.run_repo("integrate", "be", "change/x")
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("no [integration] command", done.stderr)
+
+    def test_integrate_runs_command(self):
+        self.add_be_fe()
+        self.write_integration(f"{sys.executable} integrate.py")
+        self.assertEqual(self.run_repo("integration").stdout.strip(),
+                         f"{sys.executable} integrate.py")
+        done = self.run_repo("integrate", "fe", "change/x")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        lines = done.stdout.splitlines()
+        self.assertEqual(lines[0], f"integrating change/x of fe at {self.orch / 'proj-fe'}")
+        self.assertEqual(lines[-1], "PR https://example.test/pr/1")
+        self.assertEqual(self.run_repo("integrate", "fe", "bad").returncode, 3)
+        done = self.run_repo("integrate", "nope", "change/x")
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("not declared", done.stderr)
+
+    def test_bad_integration_refused(self):
+        with open(self.orch / "mra-flow.toml", "a") as f:
+            f.write('\n[integration]\ncommand = ""\n')
+        done = self.run_repo("integration")
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("non-empty string", done.stderr)
 
     def test_list_cycle_fails(self):
         with open(self.orch / "mra-flow.toml", "a") as f:

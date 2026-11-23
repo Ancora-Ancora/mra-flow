@@ -28,10 +28,14 @@ Integrate each repo's branch, then archive the OpenSpec change and close the bea
      - **block** — a colleague's commit touches a file this change also touches (compare with `git -C .worktrees/<change-id>/<key> diff --name-only $base`) → rebase or merge `origin/<default-branch>` into `change/<change-id>`, then `/mra-verify`;
      - **pass, with a note** — a DRIFT-SPEC only on requirements this change does not touch → record it in the epic notes and, after step 7, recommend a spec-only sync change as `/mra-drift` step 10 describes.
 
-2. **Integrate each repo.** For each worktree in `.worktrees/<change-id>/`, call the Skill tool with `superpowers:finishing-a-development-branch` and let the user choose (merge locally, push + PR, keep). Integrate the repos in integration order (`.mra-flow/bin/mra-repo list`: dependencies first). Record each outcome (merge sha or PR url).
+2. **Integrate each repo.** For each worktree in `.worktrees/<change-id>/`, in integration order (`.mra-flow/bin/mra-repo list`: dependencies first):
+   - If `.mra-flow/bin/mra-repo integration` prints a command, the project integrates its own way: ask the user per repo to integrate or keep. Integrate → `.mra-flow/bin/mra-repo integrate <key> change/<change-id>`; its last output line is the outcome. A non-zero exit → stop and report its output; never retry or work around it.
+   - Otherwise call the Skill tool with `superpowers:finishing-a-development-branch` and let the user choose (merge locally, push + PR, keep).
+
+   Record each outcome (merge sha or PR url).
 3. **Tick tasks.** In `openspec/changes/<change-id>/tasks.md`, tick each checkbox `X.Y` whose beads issue (`bd list --parent <epic> --metadata-field task=X.Y --all`) is closed. All must be ticked; stop if one is not. This is the only time beads status is written into `tasks.md`.
 4. **Archive.** Call the Skill tool with `openspec-archive-change` for `<change-id>` (syncs delta specs into `openspec/specs/`).
-5. **ADRs.** For each ADR the change cited or created, set the `status:` field in its frontmatter (add the frontmatter if missing): `accepted` for an ADR this change created or confirmed, `superseded by ADR-NNNN` for one it replaced. Leave other ADRs untouched.
+5. **ADRs.** For each ADR the change cited or created, record its status: `accepted` for an ADR this change created or confirmed, `superseded by ADR-NNNN` for one it replaced. Use the status field the ADR already has, in its own format (e.g. a `**Status:**` header line, plus a `**Superseded by:**` line if the project uses one), and follow the project's ADR conventions in `CLAUDE.md` when it has them; add a frontmatter `status:` field only when the ADR has no status field at all. Leave other ADRs untouched.
 6. **Close the epic:** `bd close <epic> --reason "archived; <key>: <sha/PR>, ..."` (one entry per integrated repo).
 7. **Orchestrator commit.** Show `git status` and the proposed message, e.g. `Archive <change-id> (<key> <sha/PR>, ...)`, and commit after the user confirms.
 

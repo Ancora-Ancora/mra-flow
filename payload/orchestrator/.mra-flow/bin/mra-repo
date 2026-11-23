@@ -6,12 +6,17 @@
   mra-repo clone     clone every declared repo that is missing (after a fresh clone)
   mra-repo list      key, path, depends_on per repo, in integration order
   mra-repo ui-paths <key>   the repo's UI paths, one per line (none: no UI)
+  mra-repo integration      the project's integration command (none: use
+                            superpowers:finishing-a-development-branch)
+  mra-repo integrate <key> <branch>
+                     run the integration command for one repo's branch
 """
 from __future__ import annotations
 
 import argparse
 import json
 import re
+import shlex
 import subprocess
 import sys
 import tomllib
@@ -26,14 +31,17 @@ class Refusal(Exception):
     pass
 
 
-def load() -> dict[str, dict]:
+def load_registry() -> dict:
     if not REGISTRY.exists():
         raise Refusal(f"{REGISTRY.name} not found in {ROOT}; is mra-flow installed?")
     try:
-        data = tomllib.loads(REGISTRY.read_text(encoding="utf-8"))
+        return tomllib.loads(REGISTRY.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as exc:
         raise Refusal(f"{REGISTRY.name} is not valid TOML: {exc}") from exc
-    repos = data.get("repos", {})
+
+
+def load() -> dict[str, dict]:
+    repos = load_registry().get("repos", {})
     for key, repo in repos.items():
         for field in ("path", "remote", "description"):
             if not isinstance(repo.get(field), str):
@@ -43,6 +51,19 @@ def load() -> dict[str, dict]:
         if not (isinstance(ui_paths, list) and all(isinstance(p, str) and p for p in ui_paths)):
             raise Refusal(f"repos.{key}.ui_paths must be a list of non-empty strings")
     return repos
+
+
+def load_integration() -> list[str]:
+    """The [integration] command as argv, or [] when the project declares none."""
+    table = load_registry().get("integration", {})
+    if not isinstance(table, dict):
+        raise Refusal("integration must be a table: [integration] command = \"...\"")
+    command = table.get("command")
+    if command is None:
+        return []
+    if not (isinstance(command, str) and command.strip()):
+        raise Refusal("integration.command must be a non-empty string")
+    return shlex.split(command)
 
 
 def integration_order(repos: dict[str, dict]) -> list[str]:
@@ -155,6 +176,28 @@ def cmd_ui_paths(args: argparse.Namespace) -> None:
         print(path)
 
 
+def cmd_integration(_: argparse.Namespace) -> None:
+    argv = load_integration()
+    if argv:
+        print(shlex.join(argv))
+
+
+def cmd_integrate(args: argparse.Namespace) -> int:
+    argv = load_integration()
+    if not argv:
+        raise Refusal("no [integration] command in mra-flow.toml; "
+                      "use superpowers:finishing-a-development-branch")
+    repos = load()
+    if args.key not in repos:
+        raise Refusal(f"repo {args.key!r} is not declared")
+    path = ROOT / repos[args.key]["path"]
+    try:
+        done = subprocess.run([*argv, args.key, str(path), args.branch], cwd=ROOT)
+    except OSError as exc:
+        raise Refusal(f"cannot run integration command {argv[0]!r}: {exc}") from exc
+    return done.returncode
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="mra-repo", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -172,13 +215,19 @@ def main(argv: list[str]) -> int:
     ui = sub.add_parser("ui-paths", help="a repo's UI paths, one per line")
     ui.add_argument("key")
     ui.set_defaults(func=cmd_ui_paths)
+    sub.add_parser("integration", help="the project's integration command, if any"
+                   ).set_defaults(func=cmd_integration)
+    integ = sub.add_parser("integrate", help="run the integration command for a repo's branch")
+    integ.add_argument("key")
+    integ.add_argument("branch")
+    integ.set_defaults(func=cmd_integrate)
     args = parser.parse_args(argv)
     try:
-        args.func(args)
+        code = args.func(args)
     except Refusal as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
-    return 0
+    return code or 0
 
 
 if __name__ == "__main__":

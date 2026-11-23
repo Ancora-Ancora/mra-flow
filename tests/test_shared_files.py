@@ -75,6 +75,18 @@ class SettingsTest(TmpTestCase):
         self.assertEqual(self.load()["enabledPlugins"],
                          {sf.REQUIRED_PLUGINS[0]: False, sf.REQUIRED_PLUGINS[1]: True})
 
+    def test_skips_plugin_enabled_from_another_marketplace(self):
+        vendored = "superpowers@local-plugins"
+        self.write({"enabledPlugins": {vendored: True}})
+        self.merge()
+        self.assertEqual(self.load()["enabledPlugins"],
+                         {vendored: True, sf.REQUIRED_PLUGINS[1]: True})
+
+    def test_disabled_copy_elsewhere_does_not_block_plugin(self):
+        self.write({"enabledPlugins": {"superpowers@local-plugins": False}})
+        self.merge()
+        self.assertTrue(self.load()["enabledPlugins"][sf.REQUIRED_PLUGINS[0]])
+
     def test_idempotent(self):
         self.assertTrue(self.merge())
         before = self.path().read_bytes()

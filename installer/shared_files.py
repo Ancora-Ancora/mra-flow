@@ -94,6 +94,8 @@ def merge_settings(path: Path, *, hook: dict | None = None,
     if plugins:
         enabled = settings.setdefault("enabledPlugins", {})
         for name in plugins:
+            if name not in enabled and _same_plugin_enabled(enabled, name):
+                continue  # another copy of this plugin (e.g. a vendored one) is in use
             enabled.setdefault(name, True)  # an explicit false from the user wins
 
     if original is not None and json.loads(original) == settings:
@@ -101,6 +103,14 @@ def merge_settings(path: Path, *, hook: dict | None = None,
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
     return True
+
+
+def _same_plugin_enabled(enabled: dict, name: str) -> bool:
+    """True if a plugin with the same name from another marketplace is enabled,
+    e.g. superpowers@local-plugins when name is superpowers@claude-plugins-official."""
+    base = name.split("@", 1)[0]
+    return any(other.split("@", 1)[0] == base and value is True
+               for other, value in enabled.items() if other != name)
 
 
 def _hook_marker(hook: dict) -> str:
