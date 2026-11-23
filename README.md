@@ -11,7 +11,7 @@ On a new machine, do these steps in order, then [Install](#install) and [Verify]
 
 ### 1. Tools
 
-- git, python3 >= 3.11, Node.js >= 20.19 with npm (for OpenSpec), [gh](https://cli.github.com/), [bd (beads)](https://github.com/gastownhall/beads), Claude Code. OpenSpec and the plugins are covered below.
+- git, python3 >= 3.11, Node.js >= 22.20 with npm (for OpenSpec), [gh](https://cli.github.com/), [bd (beads)](https://github.com/gastownhall/beads), Claude Code. OpenSpec and the plugins are covered below.
 
 ### 2. GitHub access
 
@@ -34,7 +34,7 @@ Or set it once for good: `gh auth setup-git`.
 
 ### 3. OpenSpec
 
-OpenSpec is an npm package and needs Node.js (20.19 or newer). Install the CLI globally and check the version:
+OpenSpec is an npm package and needs Node.js 22.20 or newer (OpenSpec 1.16–1.x: 22.12 or newer). Install the CLI globally and check the version:
 
 ```bash
 npm install -g @fission-ai/openspec@latest
