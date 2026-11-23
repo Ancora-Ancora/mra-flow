@@ -94,3 +94,30 @@ class QaUiTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+UI_PREVIEW = PAYLOAD / "orchestrator" / ".mra-flow" / "docs" / "agents" / "ui-preview.md"
+
+
+class UiPreviewTest(unittest.TestCase):
+    def test_rule_file_exists_and_names_the_three_previews(self):
+        text = UI_PREVIEW.read_text(encoding="utf-8")
+        for line in ("preview: prototype docs/prototypes/<slug>.md", "preview: sketch accepted", "preview: declined (<reason>)"):
+            self.assertIn(line, text)
+
+    def test_skills_that_ask_or_use_the_preview_point_to_the_rule(self):
+        # One definition of "which screen needs which preview": every skill
+        # that asks for a preview or reads its outcome points to the same file.
+        for name in ("mra-grill", "mra-propose", "mra-update", "mra-prototype"):
+            text = (SKILLS / name / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("`.mra-flow/docs/agents/ui-preview.md`", text, name)
+
+    def test_prototype_verdict_is_written_to_a_note(self):
+        text = (SKILLS / "mra-prototype" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("docs/prototypes/<slug>.md", text)
+        qa = (SKILLS / "mra-qa-ui" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("docs/prototypes/<slug>.md", qa)
+
+    def test_build_does_not_ask_for_a_preview(self):
+        text = (SKILLS / "mra-build" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("ui-preview.md", text)

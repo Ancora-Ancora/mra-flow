@@ -14,13 +14,15 @@ Create the OpenSpec change for `$ARGUMENTS` with all artifacts of the `mra-flow`
 1. **Preflight.**
    - **Repos registered?** `.mra-flow/bin/mra-repo list`; if it prints nothing, recommend `.mra-flow/bin/mra-repo add <key> <remote> --description "..."` before proceeding: `tasks.md`'s `[<key>]` tags need at least one declared repo. Proceed if the user declines.
    - **Grilling check.** Look for ADRs and glossary terms that cover this topic, per the domain-docs layout in use (`.mra-flow/docs/agents/domain.md`). If none do, tell the user and ask: run `/mra-grill` first, or proceed anyway. Wait for the answer.
+   - **UI preview check.** If the grill close summary or the topic brings a screen in a repo's `ui_paths` that `.mra-flow/docs/agents/ui-preview.md` says needs a preview, and that screen has no `preview:` line yet, recommend it now (`/mra-prototype <question>`, or a sketch in a question with a `preview`). Proceed if the user declines, recording `preview: declined (<reason>)`.
    - **Spec drift check.** Check whether `$ARGUMENTS` matches a capability already in `openspec list --specs`. If so, recommend `/mra-drift <capability>` before proceeding and resolving any DRIFT-SPEC it finds first: the proposal must build on the code's real current behaviour, not a possibly stale spec. Proceed if the user declines.
-2. Call the Skill tool with `openspec-propose`, passing the change id/description and the carried decisions from the `/mra-grill` close summary. Follow it up to its closing prompt; the schema instructions carry the project rules (ADR citations, `## Contract:` sections, `[<key>]` tasks with `Depends on:` / `Covers:`).
+2. Call the Skill tool with `openspec-propose`, passing the change id/description, the carried decisions from the `/mra-grill` close summary, and the `preview:` lines with their `docs/prototypes/` notes. Follow it up to its closing prompt; the schema instructions carry the project rules (ADR citations, `## Contract:` sections, `[<key>]` tasks with `Depends on:` / `Covers:`).
 3. **Check the result:**
    - `openspec validate <change-id> --strict` passes.
    - For every repo the proposal Impact names together with one of its `depends_on` (`.mra-flow/bin/mra-repo list`), `design.md` has a filled `## Contract: <repo> -> <dependency>`.
    - Every task in `tasks.md` has a `[<key>]` tag naming a repo declared in `mra-flow.toml`.
    - Every spec scenario appears in at least one task's `Covers:` line.
+   - Every screen in `design.md`'s `## UI` that is new or changed has a `preview:` line (`.mra-flow/docs/agents/ui-preview.md`).
    Fix any gap via the `openspec-update-change` skill (Skill tool) before going on.
 4. If `design.md` lists **ADR candidates**, offer to record them now (Skill tool: `mattpocock-skills:domain-modeling`). If its open questions include external facts (a library's capability, an API's behaviour, a version difference), offer `/mra-research <question> --change <change-id>` and fold the answers in through `openspec-update-change`.
 5. End with the change id and the next command: `/mra-track <change-id>`. This replaces the next step that `openspec-propose` suggests and that `openspec status` prints (`/opsx:apply`, `openspec instructions apply`): in mra-flow, tasks go to beads before any code.

@@ -11,7 +11,7 @@ Revise the change's artifacts, then reconcile the work already tracked or built 
 
 ## Steps
 
-1. If the revision hinges on an open question, settle it first: an external fact (library, API, standard, version) → recommend `/mra-research <question> --change <change-id>`; a design question nobody can settle by talking (a state model, or what a UI should look like) → recommend `/mra-prototype <question>`. Use the finding or verdict as the new decision.
+1. If the revision hinges on an open question, settle it first: an external fact (library, API, standard, version) → recommend `/mra-research <question> --change <change-id>`; a design question nobody can settle by talking (a state model, or what a UI should look like) → recommend `/mra-prototype <question>`. Use the finding or verdict as the new decision. A revision that adds or changes a screen gets its UI preview first, as `.mra-flow/docs/agents/ui-preview.md` says, and its `preview:` line in `design.md`.
 2. If the revision comes from a new hard-to-reverse decision, record it first (Skill tool: `mattpocock-skills:domain-modeling`) so the artifacts can cite the ADR.
 3. Call the Skill tool with `openspec-update-change` for `$ARGUMENTS` and follow it. The `mra-flow` schema rules still apply (`## Contract:` sections, `[<key>]` tags, `Depends on:` / `Covers:`).
 4. `openspec validate <change-id> --strict` passes.

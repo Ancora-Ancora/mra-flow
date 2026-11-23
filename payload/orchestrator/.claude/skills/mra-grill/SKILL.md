@@ -18,11 +18,12 @@ Stress-test the idea in `$ARGUMENTS` and record its outcomes as domain docs, bef
 5. **Stuck questions.** Proceed without either if the user declines.
    - A decision that depends on an external fact nobody here can confirm (a library's capability, an API's limits, a standard, a version difference) → recommend `/mra-research <question>`; grill other questions while it runs, then resume this one from its note.
    - A question about a state model or logic, or about what a UI should look like, still open after two rounds → recommend `/mra-prototype <question>`: a throwaway prototype settles it faster than more talk. Resume the grilling from its verdict.
-6. Keep a running list of **carried decisions**: answers that bind the change but are not ADR-worthy (an API contract, a tool or version choice, a naming detail). They have no file yet; the close summary carries them to `/mra-propose`.
-7. Close the session with a short summary:
+6. **UI preview.** Before closing, check every screen the decisions add or change against `.mra-flow/docs/agents/ui-preview.md`. A screen that needs a prototype → recommend `/mra-prototype <question>`, with the question already written (the new screens and patterns it covers); resume from the note in `docs/prototypes/`. A screen that needs a sketch → show it in a question with a `preview` and ask the user to accept or correct it. Proceed if the user declines; record the outcome per screen as that file says.
+7. Keep a running list of **carried decisions**: answers that bind the change but are not ADR-worthy (an API contract, a tool or version choice, a naming detail). They have no file yet; the close summary carries them to `/mra-propose`.
+8. Close the session with a short summary:
    - ADRs created or changed, glossary terms added (a purely technical change may add none: that is expected)
    - Carried decisions, one line each
-   - Prototype verdicts, each with its `prototype/<slug>` branch; research notes in `docs/research/`
+   - UI previews, one `preview:` line per new or changed screen (`.mra-flow/docs/agents/ui-preview.md`); prototype notes in `docs/prototypes/`; research notes in `docs/research/`
    - Open points that still need an answer
    - A proposed kebab-case change id (e.g. `add-cook-session-log`)
    - The next command: `/mra-propose <change-id>`

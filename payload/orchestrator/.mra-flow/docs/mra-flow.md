@@ -45,7 +45,7 @@ flowchart LR
     sync["<b class='t'>/mra-sync</b><br/>rare<br/><b>OpenSpec</b><br/>openspec-sync-specs"]:::oswrap
     hotfix["<b class='t'>/mra-hotfix</b><br/>rare · archived feature<br/><span class='bsp'><b>superpowers</b><br/>using-git-worktrees<br/>systematic-debugging<br/>test-driven-development<br/>verification-before-completion<br/>finishing-a-development-branch</span><br/><span class='bmp'><b>Matt Pocock</b><br/>diagnosing-bugs</span><br/><span class='bcu'>custom</span>"]:::striped
     drift(["<b class='t'>/mra-drift</b><br/>any time · read-only"]):::optional
-    proto(["<b class='t'>/mra-prototype</b><br/>stuck on design<br/><b>Matt Pocock</b><br/>prototype<br/>domain-modeling"]):::mpwrapopt
+    proto(["<b class='t'>/mra-prototype</b><br/>stuck on design · new UI<br/><b>Matt Pocock</b><br/>prototype<br/>domain-modeling"]):::mpwrapopt
     research(["<b class='t'>/mra-research</b><br/>stuck on a fact<br/><b>Matt Pocock</b><br/>research"]):::mpwrapopt
     apply["<span class='x'>/opsx:apply<br/>blocked</span>"]:::blocked
 
@@ -68,7 +68,8 @@ flowchart LR
     drift -. DRIFT-SPEC .-> propose
     drift -. DRIFT-CODE, epic open .-> fix
     drift -. DRIFT-CODE, archived .-> hotfix
-    grill -. open design question .-> proto
+    grill -. "open design question, new screen" .-> proto
+    propose -. "new screen without preview" .-> proto
     update -. open design question .-> proto
     proto -. verdict .-> grill
     proto -. verdict .-> update
@@ -223,7 +224,8 @@ flowchart LR
     dr2 --> drA["drift report<br/>→ /mra-propose or /mra-fix or /mra-hotfix, on confirmation"]
     pt["<b class='t'>/mra-prototype</b>"]:::mpwrap --> pt1["git worktree<br/>.worktrees/proto-#lt;slug#gt; · branch prototype/#lt;slug#gt;"]:::sp
     pt1 --> pt2["mattpocock-skills:prototype<br/>logic or UI"]:::mp
-    pt2 --> pt3["mattpocock-skills:domain-modeling<br/>verdict → ADR or carried decision"]:::mp
+    pt2 --> ptN["docs/prototypes/#lt;slug#gt;.md + screenshots<br/>read by design.md and /mra-qa-ui"]
+    ptN --> pt3["mattpocock-skills:domain-modeling<br/>verdict → ADR or carried decision"]:::mp
     pt3 --> pt4["bd update epic --append-notes<br/>only if the change is tracked"]:::bd
     rs["<b class='t'>/mra-research</b>"]:::mpwrap --> rs1["mattpocock-skills:research<br/>background agent · primary sources"]:::mp
     rs1 --> rsA["docs/research/YYYY-MM-DD-#lt;slug#gt;.md<br/>cited by ADRs and design.md"]

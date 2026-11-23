@@ -18,15 +18,15 @@ Build a throwaway prototype that settles the design question in `$ARGUMENTS`, re
    - "close to where it will be used" means inside the worktree, next to the module or page in question;
    - its "capture" rule is replaced by steps 6-7 below: no implementation issue exists yet.
 5. **Run it with the user** until they state the verdict and the reason behind it. Done when the question from step 1 has an answer the user owns; "looks fine" without a choice is not a verdict.
-6. **Capture the prototype.** Commit it on `prototype/<slug>` with a message that carries the question and the verdict, e.g. `Prototype <slug>: <question> -> <verdict>`. Remove the worktree (`git -C <path> worktree remove <orchestrator>/.worktrees/proto-<slug>/<key>`) and keep the branch.
-7. **Record the verdict** with a pointer to the branch: `<key>` branch `prototype/<slug>` at `<sha>`.
+6. **Capture the prototype.** For a UI prototype, take a screenshot of each screen it covers (`desktop`, and `mobile` when the screen is used on phones) into `docs/prototypes/<slug>/` at the orchestrator root. Commit it on `prototype/<slug>` with a message that carries the question and the verdict, e.g. `Prototype <slug>: <question> -> <verdict>`. Remove the worktree (`git -C <path> worktree remove <orchestrator>/.worktrees/proto-<slug>/<key>`) and keep the branch.
+7. **Record the verdict.** First write the note `docs/prototypes/<slug>.md` in the format of `.mra-flow/docs/agents/ui-preview.md` (for a logic prototype, leave out Screens and Screenshots): the verdict never lives only in the conversation. Then, with a pointer to the note and to `<key>` branch `prototype/<slug>` at `<sha>`:
    - Hard-to-reverse → an ADR, through the Skill tool `mattpocock-skills:domain-modeling`, with the pointer in its body; new terms go to the glossary of the context they belong to (`.mra-flow/docs/agents/domain.md`).
    - Otherwise → a **carried decision** for `/mra-propose` (or for `openspec-update-change` when called from `/mra-update`).
-   - A change already tracked in beads (`bd list -t epic -l openspec:<change-id>`) → also `bd update <epic> --append-notes "prototype <slug>: <verdict>; <key> prototype/<slug> <sha>"`.
+   - A change already tracked in beads (`bd list -t epic -l openspec:<change-id>`) → also `bd update <epic> --append-notes "prototype <slug>: <verdict>; docs/prototypes/<slug>.md; <key> prototype/<slug> <sha>"`.
 8. End with a summary: question, verdict, where it is recorded, branch and sha, and the command to resume — back to `/mra-grill` (the grilling continues from here), `/mra-propose <change-id>`, or `/mra-update <change-id>`.
 
 ## Rules
 
 - The `prototype/<slug>` branch is never merged, pushed or rebased onto a change branch; `/mra-build` rebuilds the validated behaviour test-first from the specs.
 - Create no beads issues; the only beads write is the epic note in step 7.
-- Do not commit in the orchestrator; list the changed files (ADR, glossary) and let the user decide.
+- Do not commit in the orchestrator; list the changed files (prototype note and screenshots, ADR, glossary) and let the user decide.

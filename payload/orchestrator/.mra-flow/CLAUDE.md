@@ -9,6 +9,7 @@ This repo is an **orchestrator**. It holds no application code.
 | `openspec/` | specs, changes, the `mra-flow` schema | this repo |
 | `docs/adr/`, `GLOSSARY.md` (multi-context: `docs/GLOSSARY-MAP.md`, `docs/<key>/`) | architecture decisions and domain language: shared by all code repos, or one context per code repo (see Domain docs) | this repo |
 | `docs/research/` | cited research notes from `/mra-research`, the evidence ADRs and designs point at | this repo |
+| `docs/prototypes/` | prototype notes and screenshots from `/mra-prototype`: the accepted verdicts `design.md` and `/mra-qa-ui` point at | this repo |
 | `.beads/` | the beads issue database for all code repos | this repo |
 | `.claude/skills/mra-*`, `.mra-flow/` | the workflow skills, hook, docs and `mra-repo`, installed by mra-flow | this repo |
 | `mra-flow.toml` | the repo registry: one `[repos.<key>]` table per code repo, with `path`, `remote`, `description`, `depends_on`, optional `ui_paths` (paths whose changes `/mra-qa-ui` checks in a browser), optional `drift = false` (out of scope: the drift check hook and `/mra-drift` ignore it) | this repo |
@@ -38,7 +39,7 @@ Every feature goes through the `mra-flow` workflow (diagram: `.mra-flow/docs/mra
 | rare | `/mra-hotfix <bd-id \| bug>` | bug in an archived feature fixed test-first, verified and integrated |
 | any time | `/mra-drift [capability]` | drift report: specs vs. real code, read-only |
 | when stuck on a fact | `/mra-research <question> [--change <id>]` | cited note in `docs/research/` |
-| when stuck on design | `/mra-prototype <question>` | verdict as ADR or carried decision; prototype kept on branch `prototype/<slug>` |
+| when stuck on design, or a new UI screen | `/mra-prototype <question>` | note in `docs/prototypes/`, verdict as ADR or carried decision; prototype kept on branch `prototype/<slug>` |
 | end of session | `/mattpocock-skills:handoff [next focus]` | `handoff/ho-<datetime>.md` (`read: false`), auto-loaded once by the next session (handoff rules: installed with `install.sh --user`) |
 
 Rules:
@@ -46,6 +47,7 @@ Rules:
 - Never implement through `/opsx:apply` or the `openspec-apply-change` skill: implementation is `/mra-build`.
 - An `mra-*` command whose argument is a question instead of what its argument hint asks for gets an answer in the context of the current phase; the phase is not restarted.
 - Write code only in `.worktrees/<change-id>/<key>` (or `.worktrees/hotfix-<bd-id>/<key>` for `/mra-hotfix`, `.worktrees/proto-<slug>/<key>` for `/mra-prototype`), never in this repo and never on the code repos' main branch.
+- Every UI change is seen before it is specified: a prototype for a new screen, navigation element or interaction pattern, a sketch for a change to an existing screen. `/mra-grill` offers it, `/mra-propose` and `/mra-update` check it; see `.mra-flow/docs/agents/ui-preview.md`.
 - The other `/opsx:*` and `/mattpocock-skills:*` commands stay available for one-off use; the `mra-*` commands are the default path.
 
 ### Spec drift
