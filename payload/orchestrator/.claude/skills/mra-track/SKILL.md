@@ -25,6 +25,7 @@ Turn `openspec/changes/<change-id>/tasks.md` into a beads epic with one child is
      --metadata '{"task":"X.Y"}' --silent
    ```
    The `task` metadata is the one link between a task and its issue: every other phase finds the issue of `X.Y` with `bd list --parent <epic> --metadata-field task=X.Y --all`.
+   Always write it as a JSON string with `--metadata '{"task":"X.Y"}'` (on create and on update; it merges with the other keys). Never `--set-metadata task=X.Y`: bd parses that value, so `2.10` is stored as the number `2.1` and collides with task 2.1.
 5. For each `Depends on: A.B` under task `X.Y`: `bd dep add <id of X.Y> <id of A.B>`.
 6. Verify: `bd dep cycles` reports none; `bd ready --parent <epic>` shows only tasks without dependencies; the *Plan check* below reports no mismatch.
 7. End with `bd show <epic>` output summary and the next command: `/mra-build <change-id>`.
@@ -35,7 +36,7 @@ Shared with `/mra-update`, `/mra-verify` and `/mra-archive`, which point here by
 
 `tasks.md` owns the plan (what to do), beads owns the status. The check compares the checkbox tasks of `tasks.md` with the epic's planned children: `bd list --parent <epic> -t task --has-metadata-key task --all --json`, leaving out the children with metadata `dropped`.
 
-Legacy epics, tracked before the `task` metadata existed, keep the link in a `tasks.md map: 1.1=<id>, ...` line of the epic notes (the last one wins). Before the first check on such an epic, copy it into metadata (`bd update <id> --set-metadata task=X.Y`) and say so in the report.
+Legacy epics, tracked before the `task` metadata existed, keep the link in a `tasks.md map: 1.1=<id>, ...` line of the epic notes (the last one wins). Before the first check on such an epic, copy it into metadata (`bd update <id> --metadata '{"task":"X.Y"}'`) and say so in the report.
 
 Report one line per mismatch:
 
@@ -48,6 +49,7 @@ Report one line per mismatch:
 | child `repo:<key>` differs from the task's `[<key>]` | task moved to another repo by hand |
 | child dependencies differ from the task's `Depends on:` | dependencies changed by hand |
 | a `-t task` child of the epic with no `task` metadata | planned work tracked outside `tasks.md` |
+| a child whose `task` metadata is a number, not a string (`2.1` where the title says `2.10`) | written with `--set-metadata task=X.Y`, which parses the value |
 | a ticked checkbox before `/mra-archive` | status written into the plan |
 
 Bugs (`-t bug`) are never part of the check: they live only in beads. Every mismatch is fixed by `/mra-update <change-id>`, never by editing the issue or `tasks.md` alone.
