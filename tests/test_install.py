@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import shutil
 import tomllib
 
 from installer import environment as env
@@ -100,6 +101,29 @@ class InstallTest(TmpTestCase):
         self.assertIn("warning: OpenSpec change in flight: foo", out)
         self.assertIn("warning: worktree in flight: .worktrees/foo", out)
         self.assertNotIn("in flight: archive", out)
+
+    def as_before_roadmap(self):
+        # The orchestrator as an older version left it: no mra-roadmap skill, not in the manifest.
+        shutil.rmtree(self.orch / ".claude/skills/mra-roadmap")
+        manifest = rc.load_manifest(self.orch)
+        del manifest.files[".claude/skills/mra-roadmap/SKILL.md"]
+        rc.save_manifest(self.orch, manifest)
+
+    def test_update_points_existing_changes_to_roadmap_retro_once(self):
+        self.ok()
+        (self.orch / "openspec/changes/archive/2026-01-01-foo").mkdir(parents=True)
+        self.as_before_roadmap()
+        self.assertIn("/mra-roadmap --retro <initiative>", self.ok().stdout)
+        self.assertNotIn("--retro", self.ok().stdout)  # the skill is in the manifest now
+
+    def test_no_roadmap_note_without_changes_or_with_a_roadmap(self):
+        self.ok()
+        self.as_before_roadmap()
+        self.assertNotIn("--retro", self.ok().stdout)
+        (self.orch / "openspec/changes/foo").mkdir(parents=True)
+        (self.orch / "docs/roadmap").mkdir(parents=True)
+        self.as_before_roadmap()
+        self.assertNotIn("--retro", self.ok().stdout)
 
     def test_openspec_gate(self):
         before = snapshot(self.orch)

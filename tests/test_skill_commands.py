@@ -108,7 +108,7 @@ class UiPreviewTest(unittest.TestCase):
     def test_skills_that_ask_or_use_the_preview_point_to_the_rule(self):
         # One definition of "which screen needs which preview": every skill
         # that asks for a preview or reads its outcome points to the same file.
-        for name in ("mra-grill", "mra-propose", "mra-update", "mra-prototype"):
+        for name in ("mra-roadmap", "mra-grill", "mra-propose", "mra-update", "mra-prototype"):
             text = (SKILLS / name / "SKILL.md").read_text(encoding="utf-8")
             self.assertIn("`.mra-flow/docs/agents/ui-preview.md`", text, name)
 
@@ -121,3 +121,68 @@ class UiPreviewTest(unittest.TestCase):
     def test_build_does_not_ask_for_a_preview(self):
         text = (SKILLS / "mra-build" / "SKILL.md").read_text(encoding="utf-8")
         self.assertNotIn("ui-preview.md", text)
+
+
+ROADMAP = PAYLOAD / "orchestrator" / ".mra-flow" / "docs" / "agents" / "roadmap.md"
+
+
+class RoadmapTest(unittest.TestCase):
+    def skill(self, name):
+        return (SKILLS / name / "SKILL.md").read_text(encoding="utf-8")
+
+    def test_rule_file_defines_estimates_totals_actuals_and_beads(self):
+        text = ROADMAP.read_text(encoding="utf-8")
+        for heading in ("## The file", "## Totals", "## Actuals", "## Beads", "## Who writes what"):
+            self.assertIn(f"\n{heading}\n", text)
+        for column in ("Estimate (d)", "Confidence", "Revised (d)", "Actual (d)"):
+            self.assertIn(column, text)
+        for line in ("`Estimate: <min>–<max> d`", "`Forecast: <min>–<max> d`", "`Progress: "):
+            self.assertIn(line, text)
+
+    def test_skills_that_read_or_write_a_roadmap_point_to_the_rule(self):
+        # One definition of the roadmap format: every skill that touches a
+        # roadmap points to the same file.
+        for name in ("mra-roadmap", "mra-grill", "mra-propose", "mra-track", "mra-archive"):
+            self.assertIn("`.mra-flow/docs/agents/roadmap.md`", self.skill(name), name)
+
+    def test_roadmap_skill_has_all_modes_and_is_user_invoked(self):
+        text = self.skill("mra-roadmap")
+        self.assertIn("disable-model-invocation: true", text)
+        for mode in ("--from <map-epic>", "--retro <initiative>", "**revise**"):
+            self.assertIn(mode, text)
+
+    def test_slice_epics_are_found_by_slice_metadata_as_json(self):
+        # Same pitfall as the task metadata: a JSON string, never --set-metadata.
+        text = ROADMAP.read_text(encoding="utf-8")
+        self.assertIn("--metadata '{\"slice\":\"<change-id>\"}'", text)
+        self.assertIn("--metadata-field slice=<change-id>", text)
+        self.assertNotIn("--set-metadata slice", text)
+
+    def test_roadmap_may_create_issues(self):
+        claude = (PAYLOAD / "orchestrator" / ".mra-flow" / "CLAUDE.md").read_text(encoding="utf-8")
+        self.assertIn("only in `/mra-roadmap` (initiative and slice epics, never tasks)", claude)
+
+    def test_roadmap_recommends_prototype_and_research_only_for_cut_or_size(self):
+        text = self.skill("mra-roadmap")
+        self.assertIn("**Stuck questions.**", text)
+        self.assertIn("`/mra-research <question>`", text)
+        self.assertIn("`/mra-prototype <question>`", text)
+        self.assertIn("changes the cut", text)
+
+    def test_ui_preview_cell_can_point_to_a_done_prototype(self):
+        rule = ROADMAP.read_text(encoding="utf-8")
+        self.assertIn("`prototype docs/prototypes/<slug>.md`", rule)
+        self.assertIn("UI preview* cell", self.skill("mra-grill"))
+
+    def test_grill_suggests_a_roadmap_before_and_after(self):
+        text = self.skill("mra-grill")
+        self.assertEqual(text.count("`/mra-roadmap <topic>`"), 2)
+
+    def test_late_phases_recommend_retro_once(self):
+        rule = ROADMAP.read_text(encoding="utf-8")
+        self.assertIn("\n## A roadmap found missing late\n", rule)
+        self.assertIn("roadmap: declined (<reason>)", rule)
+        for name in ("mra-propose", "mra-archive"):
+            text = self.skill(name)
+            self.assertIn("*A roadmap found missing late*", text, name)
+            self.assertIn("`/mra-roadmap --retro <initiative>` once", text, name)

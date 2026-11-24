@@ -18,6 +18,8 @@ Integrate each repo's branch, then archive the OpenSpec change and close the bea
    - the *Plan check* of `/mra-track` reports no mismatch (ticked checkboxes aside, there are none yet);
    - the *Drift gate* below passes.
 
+   **Actual effort** (only when the change id is a slice of a roadmap, `.mra-flow/docs/agents/roadmap.md`): measure the active days and the calendar span as *Actuals* in that file says, while the worktrees still exist, and ask the user to confirm or correct the figure. It is written in step 6.
+
    **Drift gate** (before integrating anything, so a finding can still be absorbed into this change). For each capability under `openspec/changes/<change-id>/specs/` and each repo owning it (the `[<key>]` tags in `tasks.md`):
    - `git -C <path> fetch`; `base=$(git -C .worktrees/<change-id>/<key> merge-base HEAD origin/<default-branch>)`.
    - `git -C <path> log $base..origin/<default-branch> --format='%h %an %s' --name-only`, keeping commits by authors other than `git -C <path> config user.name`. None in any repo → the gate passes silently.
@@ -37,7 +39,9 @@ Integrate each repo's branch, then archive the OpenSpec change and close the bea
 4. **Archive.** Call the Skill tool with `openspec-archive-change` for `<change-id>` (syncs delta specs into `openspec/specs/`).
 5. **ADRs.** For each ADR the change cited or created, record its status: `accepted` for an ADR this change created or confirmed, `superseded by ADR-NNNN` for one it replaced. Use the status field the ADR already has, in its own format (e.g. a `**Status:**` header line, plus a `**Superseded by:**` line if the project uses one), and follow the project's ADR conventions in `CLAUDE.md` when it has them; add a frontmatter `status:` field only when the ADR has no status field at all. Leave other ADRs untouched.
 6. **Close the epic:** `bd close <epic> --reason "archived; <key>: <sha/PR>, ..."` (one entry per integrated repo).
-7. **Orchestrator commit.** Show `git status` and the proposed message, e.g. `Archive <change-id> (<key> <sha/PR>, ...)`, and commit after the user confirms.
+   **Roadmap**, for a slice: set its row's Status to `done` and its *Actual (d)*, recompute the Total lines, add a Log line (`<change-id> done: actual <n> d vs. estimate <range>`). If every slice is now `done` or `dropped`, offer to close the initiative epic and set the front matter `status: done`.
+   **No roadmap**: if the change is a slice of no roadmap and its epic has no `roadmap: declined` note, check the late signals of *A roadmap found missing late* in `.mra-flow/docs/agents/roadmap.md`; when one holds, recommend `/mra-roadmap --retro <initiative>` once, after this archive completes, naming the related archived changes. A decline is recorded in the closed epic's notes.
+7. **Orchestrator commit.** Show `git status` (the roadmap file included, when updated) and the proposed message, e.g. `Archive <change-id> (<key> <sha/PR>, ...)`, and commit after the user confirms.
 
 ## Rules
 
