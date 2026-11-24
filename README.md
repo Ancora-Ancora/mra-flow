@@ -97,7 +97,7 @@ For an orchestrator, the installer refuses, changing nothing, if a file it would
 - adds `@.mra-flow/CLAUDE.md` to `CLAUDE.md`, the required plugins and the spec-drift and update check hooks to `.claude/settings.json`, and `.worktrees/`, `handoff/`, `.beads/issues.jsonl`, `.mra-flow/drift-state.json`, `.mra-flow/update-state.json` to `.gitignore`;
 - creates an empty, commented `mra-flow.toml`.
 
-It never rewrites `mra-flow.toml`, `GLOSSARY.md`, `docs/adr/` or `openspec/specs/`. Review the result with `git status` and commit it.
+It never rewrites `mra-flow.toml`, `GLOSSARY.md`, `docs/adr/`, `docs/roadmap/` or `openspec/specs/`. Review the result with `git status` and commit it.
 
 ## Verify
 
@@ -105,7 +105,7 @@ Start a new Claude Code session in the orchestrator and check:
 
 1. **Handoff hook.** Write a handoff (`/mattpocock-skills:handoff`), then `/clear`: the new session gets it injected exactly once, and its frontmatter turns to `read: true`. The hook is registered only in `~/.claude/settings.json`, not in the project's settings.
 2. **Conventions.** `/memory` lists both `~/.claude/mra-flow/CLAUDE.md` and `.mra-flow/CLAUDE.md` as loaded.
-3. **Skills.** Typing `/mra` offers the 14 `mra-*` commands. The agent does not list them among its own skills: they set `disable-model-invocation: true`, so only you can start a phase.
+3. **Skills.** Typing `/mra` offers the 16 `mra-*` commands. The agent does not list them among its own skills: they set `disable-model-invocation: true`, so only you can start a phase.
 4. **Repos.** `.mra-flow/bin/mra-repo list` prints your code repos, dependencies first.
 5. **Plugins.** Typing `/superpowers:` and `/mattpocock-skills:` offers their commands.
 6. **Spec-drift check hook.** After a code repo's default branch gets a new commit upstream (push it from another clone, or wait for a colleague's), start a new session (or `/clear`): it tells you new commits landed on that repo and recommends `/mra-drift`, without running it. The same hook also reminds you every session, before any repo is declared, to run `mra-repo add`. It is registered in the project's `.claude/settings.json`, not `~/.claude/settings.json`: it needs `mra-flow.toml`, which only exists in an orchestrator.

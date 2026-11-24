@@ -1,6 +1,6 @@
 # UI preview: see a screen before it is specified
 
-Rule shared by `/mra-grill`, `/mra-propose`, `/mra-update`, `/mra-prototype` and `/mra-qa-ui`. Goal: the user sees and tries every UI change before it is specified, so nothing about a screen is a surprise once the epic or slice is built. A prototype shows shape and interaction, not real data (long lists, long translations, real errors, mobile): `/mra-qa-ui` still checks those after the build.
+Rule shared by `/mra-roadmap`, `/mra-grill`, `/mra-propose`, `/mra-update`, `/mra-prototype` and `/mra-qa-ui`. Goal: the user sees and tries every UI change before it is specified, so nothing about a screen is a surprise once the epic or slice is built. A prototype shows shape and interaction, not real data (long lists, long translations, real errors, mobile): `/mra-qa-ui` still checks those after the build.
 
 ## Which preview a change gets
 
@@ -16,7 +16,8 @@ When one change brings both, the prototype covers the new parts and a sketch the
 
 ## Where it is asked
 
-- `/mra-grill`, before the close summary: the main point.
+- `/mra-roadmap`, only to name each slice's preview (its *UI preview* cell), and to recommend a prototype early when the answer changes how the work is cut or sized (`.mra-flow/docs/agents/roadmap.md`).
+- `/mra-grill`, before the close summary: the main point; for a roadmap slice whose prototype is already done, it reuses that note.
 - `/mra-propose`, preflight: safety net for a change that skipped the grill or closed it early.
 - `/mra-update`, when a revision adds a screen or pattern that needs a prototype.
 

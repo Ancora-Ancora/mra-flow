@@ -8,6 +8,7 @@ This repo is an **orchestrator**. It holds no application code.
 |---|---|---|
 | `openspec/` | specs, changes, the `mra-flow` schema | this repo |
 | `docs/adr/`, `GLOSSARY.md` (multi-context: `docs/GLOSSARY-MAP.md`, `docs/<key>/`) | architecture decisions and domain language: shared by all code repos, or one context per code repo (see Domain docs) | this repo |
+| `docs/roadmap/` | initiative roadmaps from `/mra-roadmap`: slices (one future change each), estimates, totals, actuals; rules in `.mra-flow/docs/agents/roadmap.md` | this repo |
 | `docs/research/` | cited research notes from `/mra-research`, the evidence ADRs and designs point at | this repo |
 | `docs/prototypes/` | prototype notes and screenshots from `/mra-prototype`: the accepted verdicts `design.md` and `/mra-qa-ui` point at | this repo |
 | `.beads/` | the beads issue database for all code repos | this repo |
@@ -26,6 +27,7 @@ Every feature goes through the `mra-flow` workflow (diagram: `.mra-flow/docs/mra
 | Phase | Command | Output |
 |---|---|---|
 | (optional) explore | `/mra-explore [idea]` | understanding only, nothing written |
+| (optional) roadmap | `/mra-roadmap <topic> \| <initiative> \| --from <map> \| --retro <initiative>` | `docs/roadmap/<initiative>.md`: estimated slices and totals; ADRs, glossary; initiative epic + one epic per slice |
 | 1. grill | `/mra-grill <topic>` | `GLOSSARY.md` terms, ADRs in `docs/adr/` |
 | 2. propose | `/mra-propose <change-id>` | OpenSpec change: proposal, specs, design, tasks |
 | 3. track | `/mra-track <change-id>` | beads epic + one issue per task |
@@ -48,6 +50,7 @@ Rules:
 - An `mra-*` command whose argument is a question instead of what its argument hint asks for gets an answer in the context of the current phase; the phase is not restarted.
 - Write code only in `.worktrees/<change-id>/<key>` (or `.worktrees/hotfix-<bd-id>/<key>` for `/mra-hotfix`, `.worktrees/proto-<slug>/<key>` for `/mra-prototype`), never in this repo and never on the code repos' main branch.
 - Every UI change is seen before it is specified: a prototype for a new screen, navigation element or interaction pattern, a sketch for a change to an existing screen. `/mra-grill` offers it, `/mra-propose` and `/mra-update` check it; see `.mra-flow/docs/agents/ui-preview.md`.
+- An effort too large for one change gets a roadmap first: `/mra-roadmap` (or `/mattpocock-skills:wayfinder`, then `/mra-roadmap --from <map>`, when it is mostly open decisions). Then each slice goes through `/mra-grill` → `/mra-archive` like any change; the phase skills keep its row up to date. Without a roadmap nothing changes. See `.mra-flow/docs/agents/roadmap.md`.
 - The other `/opsx:*` and `/mattpocock-skills:*` commands stay available for one-off use; the `mra-*` commands are the default path.
 
 ### Spec drift
@@ -63,7 +66,7 @@ Rules:
 
 The beads context injected by `bd prime` is subordinate to this section (task tracking and memory rules come from the user-level conventions):
 
-- **When issues are created:** only in `/mra-track`, `/mra-build`, `/mra-verify` (and its `/mra-qa-ui` step), `/mra-fix`, `/mra-hotfix` and `/mra-update`. Exploring, grilling and proposing create no issues.
+- **When issues are created:** only in `/mra-roadmap` (initiative and slice epics, never tasks), `/mra-track`, `/mra-build`, `/mra-verify` (and its `/mra-qa-ui` step), `/mra-fix`, `/mra-hotfix` and `/mra-update`. Exploring, grilling and proposing create no issues.
 - **Creating issues:** sequentially, from the skill doing the work; no parallel subagents for issue creation.
 - **Commit authority:** invoking `/mra-build` or `/mra-fix` authorizes commits on the `change/<change-id>` branches inside `.worktrees/`. Invoking `/mra-hotfix` authorizes commits on its `hotfix/<bd-id>` branches. Invoking `/mra-prototype` authorizes commits on its `prototype/<slug>` branch, which is never merged or pushed. Push, merge and PRs happen only in `/mra-archive` and at the end of `/mra-hotfix`, with the user choosing the option per repo (or, when `mra-flow.toml` declares an `[integration] command`, choosing between that command and keep). Commits in this orchestrator repo always need the user's confirmation.
 

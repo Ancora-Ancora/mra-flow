@@ -9,7 +9,8 @@ Do not use GitHub Issues or files under `.scratch/`.
 - **Target repo**: every implementation issue carries the label `repo:<key>`, where `<key>` is a repo key from `mra-flow.toml` (several only if it genuinely touches several).
 - **OpenSpec change**: issues born from a change carry the label `openspec:<change-id>` and `--spec-id openspec/changes/<change-id>`.
 - **Hierarchy**: one change = one epic (`-t epic`); tasks are children (`--parent <epic-id>`). Labels are inherited from the parent.
-- **Types**: `task` for planned work, `bug` for defects, `epic` for changes.
+- **Initiative**: an initiative roadmap = one epic labelled `roadmap:<initiative>`; each slice is a child epic with metadata `slice=<change-id>`, promoted into the change epic by `/mra-track`. See `.mra-flow/docs/agents/roadmap.md`.
+- **Types**: `task` for planned work, `bug` for defects, `epic` for changes, slices and initiatives.
 - **Discussion**: comments via `bd comments add <id> "..."`; progress notes via `bd update <id> --append-notes "..."`.
 
 ## When a skill says "publish to the issue tracker"

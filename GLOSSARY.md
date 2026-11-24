@@ -36,6 +36,26 @@ _Avoid_: API spec, interface doc
 One feature or fix carried through the workflow phases, from proposal to archive.
 _Avoid_: Feature branch, ticket, story
 
+**Initiative**:
+An effort too large for one change, cut into slices by a roadmap.
+_Avoid_: Program, project, theme
+
+**Roadmap**:
+The file that lists an initiative's slices with their order, estimates, status and actuals (`docs/roadmap/<initiative>.md`).
+_Avoid_: Backlog, plan, release plan
+
+**Slice**:
+One row of a roadmap: a future change, named by its change id, that delivers observable value on its own.
+_Avoid_: Milestone, phase, story
+
+**Estimate**:
+A slice's expected effort as a range of person-days, with a confidence; the original one is never rewritten.
+_Avoid_: Story points, guess
+
+**Actual**:
+The person-days a done slice took, measured at archive from its commits and confirmed by the user.
+_Avoid_: Spent time, burn
+
 ### Packaging
 
 **Package**:

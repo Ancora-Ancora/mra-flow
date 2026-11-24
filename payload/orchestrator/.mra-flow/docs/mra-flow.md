@@ -11,7 +11,7 @@ Colours: `mra-*` commands and the skills they call share the colour of the skill
 | <span style="display:inline-block;width:2.2em;height:1.1em;vertical-align:middle;background:#ffec99;border:1px solid #1e1e1e;"></span> | **Matt Pocock** | `/mra-grill`, `/mra-prototype`, `/mra-research` and the `mattpocock-skills:*` skills |
 | <span style="display:inline-block;width:2.2em;height:1.1em;vertical-align:middle;background:#d0bfff;border:1px solid #1e1e1e;"></span> | **custom** | `/mra-track`, `/mra-drift`: own logic only |
 | <span style="display:inline-block;width:2.2em;height:1.1em;vertical-align:middle;background:linear-gradient(90deg,#a5d8ff 0% 50%,#ffec99 50% 100%);border:1px solid #1e1e1e;"></span> | **mixed** | white box, one band per family: `/mra-propose`, `/mra-fix` |
-| <span style="display:inline-block;width:2.2em;height:1.1em;vertical-align:middle;background:linear-gradient(90deg,#a5d8ff 0% 33%,#b2f2bb 33% 66%,#d0bfff 66% 100%);border:1px solid #1e1e1e;"></span> | **mixed + custom** | white box, one band per family: `/mra-update`, `/mra-verify`, `/mra-qa-ui`, `/mra-hotfix`, `/mra-archive` |
+| <span style="display:inline-block;width:2.2em;height:1.1em;vertical-align:middle;background:linear-gradient(90deg,#a5d8ff 0% 33%,#b2f2bb 33% 66%,#d0bfff 66% 100%);border:1px solid #1e1e1e;"></span> | **mixed + custom** | white box, one band per family: `/mra-roadmap`, `/mra-update`, `/mra-verify`, `/mra-qa-ui`, `/mra-hotfix`, `/mra-archive` |
 | <span style="display:inline-block;width:2.2em;height:1.1em;vertical-align:middle;background:#ffc9c9;border:1px solid #1e1e1e;"></span> | **beads (`bd`)** | issue tracking steps |
 | <span style="display:inline-block;width:2.2em;height:1.1em;vertical-align:middle;background:#ffd8a8;border:1px solid #1e1e1e;"></span> | **hook** | SessionStart hooks |
 | <span style="display:inline-block;width:2.2em;height:1.1em;vertical-align:middle;background:#ffe3e3;border:1px solid #e03131;background-image:linear-gradient(to top right,transparent 46%,#e03131 46% 54%,transparent 54%),linear-gradient(to bottom right,transparent 46%,#e03131 46% 54%,transparent 54%);"></span> | **blocked** | `/opsx:apply`: use `/mra-build` |
@@ -32,6 +32,8 @@ flowchart LR
     classDef mpwrapopt fill:#ffec99,stroke:#1e1e1e,stroke-dasharray:5 5,color:#1e1e1e
     classDef blocked fill:transparent,stroke:transparent,color:#e03131
 
+    roadmap(["<b class='t'>/mra-roadmap</b><br/>optional · effort larger than one change<br/><span class='bmp'><b>Matt Pocock</b><br/>grilling<br/>domain-modeling</span><br/><span class='bcu'>custom</span>"]):::stripedopt
+    wayfinder(["<b class='t'>/mattpocock-skills:wayfinder</b><br/>optional · effort mostly open decisions<br/><b>Matt Pocock</b>"]):::mpwrapopt
     explore(["<b class='t'>/mra-explore</b><br/>optional<br/><b>OpenSpec</b><br/>openspec-explore"]):::oswrapopt
     grill["<b class='t'>/mra-grill</b><br/>1 · grill<br/><b>Matt Pocock</b><br/>grilling<br/>domain-modeling"]:::mpwrap
     propose["<b class='t'>/mra-propose</b><br/>2 · propose<br/><span class='bos'><b>OpenSpec</b><br/>openspec-propose<br/>openspec-update-change</span><br/><span class='bmp'><b>Matt Pocock</b><br/>domain-modeling</span>"]:::striped
@@ -50,6 +52,12 @@ flowchart LR
     apply["<span class='x'>/opsx:apply<br/>blocked</span>"]:::blocked
 
     explore -. decisions to make .-> grill
+    explore -. effort larger than one change .-> roadmap
+    wayfinder -. "map clear: --from" .-> roadmap
+    roadmap -. mostly fog .-> wayfinder
+    roadmap -- "one slice at a time" --> grill
+    grill -. "roadmap impact, topic too large" .-> roadmap
+    archive -. "slice done: actual" .-> roadmap
     explore -. decisions already recorded .-> propose
     grill --> propose --> track --> build --> verify
     verify -- bugs open --> fix
@@ -69,6 +77,10 @@ flowchart LR
     drift -. DRIFT-CODE, epic open .-> fix
     drift -. DRIFT-CODE, archived .-> hotfix
     grill -. "open design question, new screen" .-> proto
+    roadmap -. "UI question changes cut or size" .-> proto
+    roadmap -. "external fact changes cut or size" .-> research
+    proto -. verdict .-> roadmap
+    research -. cited note .-> roadmap
     propose -. "new screen without preview" .-> proto
     update -. open design question .-> proto
     proto -. verdict .-> grill
@@ -100,11 +112,22 @@ flowchart TB
     classDef os fill:#a5d8ff,stroke:#1e1e1e,color:#1e1e1e
     classDef bd fill:#ffc9c9,stroke:#1e1e1e,color:#1e1e1e
     classDef art fill:#f8f9fa,stroke:#495057,stroke-dasharray:4 4,color:#1e1e1e
+    classDef step fill:#ffffff,stroke:#1e1e1e,color:#1e1e1e
 
     subgraph EX["<b class='t'>/mra-explore</b>"]
         direction TB
         ex["<b class='t'>/mra-explore</b>"]:::oswrap --> ex1["openspec-explore"]:::os
         ex1 --> exA["nothing written"]:::art
+    end
+    subgraph RM["<b class='t'>/mra-roadmap</b>"]
+        direction TB
+        rm["<b class='t'>/mra-roadmap</b><br/><span class='bmp'>mattpocock</span><span class='bcu'>custom</span>"]:::striped --> rm0["seed: new · revise · --from wayfinder map · --retro done/in-flight changes"]:::step
+        rm0 --> rm1["mattpocock-skills:grilling<br/>breadth-first"]:::mp
+        rm0 --> rm2["mattpocock-skills:domain-modeling"]:::mp
+        rm1 -. "cut or size depends on it" .-> rm5["recommend /mra-prototype · /mra-research"]:::step
+        rm1 & rm2 --> rm3["slices · sizes · person-day ranges<br/>reference class: done slices' actuals"]:::step
+        rm3 --> rm4["bd create<br/>initiative epic + 1 epic per slice · bd dep add"]:::bd
+        rm4 --> rmA["docs/roadmap/#lt;initiative#gt;.md<br/>slices · estimates · totals · ADRs · glossary"]:::art
     end
     subgraph GR["<b class='t'>/mra-grill</b>"]
         direction TB
@@ -122,7 +145,7 @@ flowchart TB
     end
     subgraph TR["<b class='t'>/mra-track</b>"]
         direction TB
-        tr["<b class='t'>/mra-track</b>"]:::phase --> tr1["bd create<br/>epic + 1 issue per task"]:::bd
+        tr["<b class='t'>/mra-track</b>"]:::phase --> tr1["bd create<br/>epic (or promote the slice epic) + 1 issue per task"]:::bd
         tr1 --> tr2["bd dep add"]:::bd
         tr2 --> tr3["bd dep cycles · bd ready · plan check"]:::bd
         tr3 --> trA["beads epic openspec:#lt;id#gt;<br/>repo:#lt;key#gt; labels · task=X.Y metadata"]:::art
