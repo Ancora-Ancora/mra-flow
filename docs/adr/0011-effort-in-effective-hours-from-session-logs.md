@@ -16,3 +16,4 @@ ADR-0010 sized roadmap slices in person-days and took a slice's actual from the 
 - Work done under no command, or under a command that does not name the change (a grill topic, a hotfix id), is listed as unattributed for the user to assign, or counted with `--alias`.
 - Parallel sessions are summed, so overlapping work counts twice; in practice the overlap is small and the user can correct the figure.
 - Each slice epic carries the upper bound of its current range as its beads estimate (`--estimate`, minutes), so `bd show` and `bd list` show it; the variance report shows the original range next to the upper bound it compares against (0.1.32).
+- The variance table carries one column per phase used (`mra-grill` … `mra-hotfix`) with its actual hours, in place of a separate phase table (0.1.33).

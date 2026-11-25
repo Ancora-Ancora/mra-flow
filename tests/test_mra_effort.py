@@ -181,13 +181,14 @@ class MraEffortTest(TmpTestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         report = (self.orch / "docs/roadmap/demo-effort.md").read_text()
         self.assertIn("do not edit", report)
-        self.assertIn("| 1 | bd-2 | add-a | First slice | 5–8 | 8 | 10 | +2.0 | +25% | 🔴 |", report)
-        self.assertIn("| 2 | bd-3 | add-b | Second slice | 2–4 | 4 | 3 | -1.0 | -25% | 🟢 |", report)
-        self.assertIn("| 3 | bd-4 | add-c | Third slice | 8–12 | 12 | – |  |  | ⚪ |", report)
+        self.assertIn("| 1 | bd-2 | add-a | First slice | 5–8 | 8 | 10 | +2.0 | +25% | 🔴 | 10 |  |", report)
+        self.assertIn("| 2 | bd-3 | add-b | Second slice | 2–4 | 4 | 3 | -1.0 | -25% | 🟢 |  | 3 |", report)
+        self.assertIn("| 3 | bd-4 | add-c | Third slice | 8–12 | 12 | – |  |  | ⚪ |  |  |", report)
         self.assertNotIn("add-d", report)
-        self.assertIn("| **Total** | slices with an estimate and an actual |  | 12 | 13 | +1.0 | +8% | 🔴 |", report)
-        self.assertIn("## Hours by phase", report)
-        self.assertIn("| Change id | build | fix | Total |", report)
+        self.assertIn("| **Total** | done slices |  | 12 | 13 | +1.0 | +8% | 🔴 | 10 | 3 |", report)
+        # one column per phase used, named after its command, in workflow order
+        self.assertIn("| Variance (h) | Variance (%) |  | mra-build | mra-fix |", report)
+        self.assertNotIn("mra-grill", report)
         text = self.roadmap()
         self.assertIn("- Estimate: 15–24 h", text)          # dropped slice left out
         self.assertIn("- Forecast: 22–26 h", text)          # 10 + 3 + revised 9–13

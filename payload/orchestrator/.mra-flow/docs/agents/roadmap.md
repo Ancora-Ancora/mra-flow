@@ -112,10 +112,7 @@ The **Total** section holds three lines. Never compute them by hand: whoever cha
 - `Forecast: <min>–<max> h` — the sum, over slices not dropped, of the actual for done slices, else the revised range, else the original one.
 - `Progress: <done>/<total> slices; actual <sum of actuals> h vs. estimated <sum of the original ranges of the done slices> h`.
 
-The effort file holds two tables:
-
-- **Variance by slice**: per slice not dropped, its epic, change id, goal, estimate range (*Estimate (h)*), estimated hours (its upper bound), actual hours, variance (actual − estimated) in hours and in percent of the estimate, and 🔴 when over the estimate, 🟢 when within it, ⚪ when not done; a **Total** row over the slices that have both figures.
-- **Hours by phase**: the *Actuals by phase* rows, with only the phases used and a Total row.
+The effort file holds one table, **Variance by slice**: per slice not dropped, its epic, change id, goal, estimate range (*Estimate (h)*), estimated hours (its upper bound), actual hours, variance (actual − estimated) in hours and in percent of the estimate, and 🔴 when over the estimate, 🟢 when within it, ⚪ when not done; then one column per phase used (`mra-grill`, `mra-prototype`, `mra-propose`, … `mra-hotfix`), with the actual hours of that phase from *Actuals by phase*. A **Total** row sums the done slices; its variance covers the slices that have both an estimate and an actual.
 
 ## Actuals
 
