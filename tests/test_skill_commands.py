@@ -150,6 +150,13 @@ class RoadmapTest(unittest.TestCase):
             self.assertIn("mra-effort report", self.skill(name), name)
             self.assertNotIn("(d)", self.skill(name), name)
 
+    def test_slice_epics_carry_the_estimate(self):
+        # bd shows the estimate next to the work: the slice epic holds the
+        # upper bound of the current range, in minutes.
+        self.assertIn("--estimate", ROADMAP.read_text(encoding="utf-8"))
+        self.assertIn("--estimate", self.skill("mra-roadmap"))
+        self.assertIn("--estimate", self.skill("mra-propose"))
+
     def test_skills_that_read_or_write_a_roadmap_point_to_the_rule(self):
         # One definition of the roadmap format: every skill that touches a
         # roadmap points to the same file.

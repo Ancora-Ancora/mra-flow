@@ -50,9 +50,9 @@ Pick the mode from `$ARGUMENTS`:
 8. **Write the roadmap** `docs/roadmap/<initiative>.md` in the format of `.mra-flow/docs/agents/roadmap.md`, with a first Log line (`created`, `created from wayfinder map <id>`, `reconstructed (retro)` or the revision and its trigger). In revise mode, change only open rows: never rewrite a done row or an original estimate; a dropped slice keeps its row with status `dropped`. In retro mode, write each done slice's confirmed hours with `.mra-flow/bin/mra-effort record <initiative> <change-id> --phase <phase>=<hours> ...`. Then run `.mra-flow/bin/mra-effort report <initiative>`: it writes the Total lines and `docs/roadmap/<initiative>-effort.md`.
 9. **Beads**, sequentially, following *Beads* in `.mra-flow/docs/agents/roadmap.md`:
    - the initiative epic (new, or the wayfinder map in from mode, or reuse it in revise mode); write its id into the front matter;
-   - one slice epic per slice not done and without an epic; in retro mode, reparent the in-flight change epics instead;
+   - one slice epic per slice not done and without an epic, with `--estimate` = the upper bound of its range × 60 (minutes); in retro mode, reparent the in-flight change epics instead (and set their estimate the same way);
    - dependencies between slice epics; `bd dep cycles` must report none;
-   - revise mode: close the epics of dropped slices; create the epics of new ones.
+   - revise mode: close the epics of dropped slices; create the epics of new ones; update the `--estimate` of every open slice whose range changed.
    Write each epic id into its row.
 10. **Close** with a short summary:
    - ADRs created or changed, glossary terms added;

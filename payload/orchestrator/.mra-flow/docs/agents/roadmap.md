@@ -114,7 +114,7 @@ The **Total** section holds three lines. Never compute them by hand: whoever cha
 
 The effort file holds two tables:
 
-- **Variance by slice**: per slice not dropped, its epic, change id, goal, estimated hours (the upper bound of *Estimate (h)*), actual hours, variance (actual − estimated) in hours and in percent of the estimate, and 🔴 when over the estimate, 🟢 when within it, ⚪ when not done; a **Total** row over the slices that have both figures.
+- **Variance by slice**: per slice not dropped, its epic, change id, goal, estimate range (*Estimate (h)*), estimated hours (its upper bound), actual hours, variance (actual − estimated) in hours and in percent of the estimate, and 🔴 when over the estimate, 🟢 when within it, ⚪ when not done; a **Total** row over the slices that have both figures.
 - **Hours by phase**: the *Actuals by phase* rows, with only the phases used and a Total row.
 
 ## Actuals
@@ -131,8 +131,9 @@ The actual is **effective hours**: the time the agent or the user was active on 
 ## Beads
 
 - **Initiative epic**: `bd create "<initiative>: <title>" -t epic -l roadmap:<initiative> --spec-id docs/roadmap/<initiative>.md -d "<Destination>"`. From `--from <map-epic>`, the wayfinder map epic is reused instead: `bd update <map-epic> --add-label roadmap:<initiative> --spec-id docs/roadmap/<initiative>.md`.
-- **Slice epic**: one child per slice not done, `bd create "<change-id>: <goal>" -t epic --parent <initiative epic> -d "<goal; open points of the slice>" --metadata '{"slice":"<change-id>"}'`; it inherits `roadmap:<initiative>`. Find it with `bd list --parent <initiative epic> -t epic --metadata-field slice=<change-id> --all`.
+- **Slice epic**: one child per slice not done, `bd create "<change-id>: <goal>" -t epic --parent <initiative epic> -d "<goal; open points of the slice>" --metadata '{"slice":"<change-id>"}' --estimate <minutes>`, the estimate being the upper bound of *Estimate (h)* × 60; it inherits `roadmap:<initiative>`. Find it with `bd list --parent <initiative epic> -t epic --metadata-field slice=<change-id> --all`.
 - **Promotion**: `/mra-track` turns the slice epic into the change epic (`bd update <slice epic> --add-label openspec:<change-id> --spec-id openspec/changes/<change-id> --title "<change-id>: <proposal title>" -d "<proposal Why>"`) instead of creating a new one; tasks become its children as usual.
+- **Estimate on the epic**: the slice epic's `--estimate` (minutes) always holds the upper bound of the slice's current range: set at creation by `/mra-roadmap`, updated to the upper bound of *Revised (h)* by `/mra-propose` (`bd update <slice epic> --estimate <minutes>`), and in revise mode whenever an open slice's estimate changes. `bd show` and `bd list` then show it next to the work.
 - **Order**: for each `Depends on`, `bd dep add <slice epic> <slice epic it depends on>`.
 - **Existing change epics** (`--retro`): `bd update <change epic> --parent <initiative epic> --add-label roadmap:<initiative> --metadata '{"slice":"<change-id>"}'`; archived changes get no new epic: their row records the old epic id, if any.
 - **Dropped slice**: `bd close <slice epic> --reason "dropped from roadmap <initiative>: <why>"`.
@@ -144,6 +145,6 @@ The actual is **effective hours**: the time the agent or the user was active on 
 |---|---|
 | `/mra-roadmap` | everything: rows, sizes, original estimates, scale, assumptions, risks, epics, log |
 | `/mra-grill` | nothing; reports **roadmap impact** in its close summary and recommends `/mra-roadmap <initiative>` when slices must change |
-| `/mra-propose` | its row: Revised, Status `proposed`; Total and effort file (`mra-effort report`); a log line when the revised range leaves the original one |
+| `/mra-propose` | its row: Revised, Status `proposed`; the slice epic's estimate; Total and effort file (`mra-effort report`); a log line when the revised range leaves the original one |
 | `/mra-track` | its row: Status `in progress`, Epic; promotes the slice epic |
 | `/mra-archive` | its row: Status `done`, Actual and Actuals by phase (`mra-effort record`); Total and effort file (`mra-effort report`); a log line; closes the initiative when done |
