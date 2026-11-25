@@ -129,6 +129,9 @@ Files you edited locally are left alone and listed in the report; they stay flag
 .mra-flow/bin/mra-repo ui-paths <key>   # the repo's UI paths (none: no UI)
 .mra-flow/bin/mra-repo integration      # the project's integration command (none: finishing-a-development-branch)
 .mra-flow/bin/mra-repo integrate <key> <branch>   # run it for one repo's branch
+.mra-flow/bin/mra-effort measure <change-id> [--alias TEXT]   # effective hours per phase, from the session logs
+.mra-flow/bin/mra-effort record <initiative> <change-id> --phase build=3.5 ...   # write them into the roadmap
+.mra-flow/bin/mra-effort report <initiative>   # totals + docs/roadmap/<initiative>-effort.md (estimate vs. actual)
 ```
 
 `add` clones the repo, git-ignores it and appends a `[repos.<key>]` table to `mra-flow.toml`. The key is used as task tag `[key]`, beads label `repo:key` and worktree `.worktrees/<change-id>/<key>`.

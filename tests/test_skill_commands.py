@@ -134,10 +134,21 @@ class RoadmapTest(unittest.TestCase):
         text = ROADMAP.read_text(encoding="utf-8")
         for heading in ("## The file", "## Totals", "## Actuals", "## Beads", "## Who writes what"):
             self.assertIn(f"\n{heading}\n", text)
-        for column in ("Estimate (d)", "Confidence", "Revised (d)", "Actual (d)"):
+        # ADR-0011: effort in effective hours, never days.
+        for column in ("Estimate (h)", "Confidence", "Revised (h)", "Actual (h)"):
             self.assertIn(column, text)
-        for line in ("`Estimate: <min>–<max> d`", "`Forecast: <min>–<max> d`", "`Progress: "):
+        self.assertNotIn("(d)", text)
+        for line in ("`Estimate: <min>–<max> h`", "`Forecast: <min>–<max> h`", "`Progress: "):
             self.assertIn(line, text)
+
+    def test_skills_use_mra_effort_for_the_figures(self):
+        # Totals, actuals and the variance report come from the script, not
+        # from agent arithmetic.
+        self.assertIn("mra-effort measure", self.skill("mra-archive"))
+        self.assertIn("mra-effort record", self.skill("mra-archive"))
+        for name in ("mra-archive", "mra-propose", "mra-roadmap"):
+            self.assertIn("mra-effort report", self.skill(name), name)
+            self.assertNotIn("(d)", self.skill(name), name)
 
     def test_skills_that_read_or_write_a_roadmap_point_to_the_rule(self):
         # One definition of the roadmap format: every skill that touches a

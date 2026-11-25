@@ -49,12 +49,20 @@ One row of a roadmap: a future change, named by its change id, that delivers obs
 _Avoid_: Milestone, phase, story
 
 **Estimate**:
-A slice's expected effort as a range of person-days, with a confidence; the original one is never rewritten.
+A slice's expected effort as a range of effective hours, with a confidence; the original one is never rewritten, and the variance is measured against its upper bound.
 _Avoid_: Story points, guess
 
 **Actual**:
-The person-days a done slice took, measured at archive from its commits and confirmed by the user.
-_Avoid_: Spent time, burn
+The effective hours a done slice took, per phase: the time the agent or the user was active on it, measured at archive from the session logs and confirmed by the user.
+_Avoid_: Spent time, burn, active days
+
+**Effective hours**:
+Time the agent or the user was actually working, counted from the session logs with pauses longer than a few minutes left out; never calendar time.
+_Avoid_: Person-days, elapsed time
+
+**Variance**:
+A done slice's actual minus the upper bound of its estimate, in hours and in percent; over the estimate is red, within it green.
+_Avoid_: Delta, slippage
 
 ### Packaging
 

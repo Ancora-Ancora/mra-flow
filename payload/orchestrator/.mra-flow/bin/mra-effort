@@ -1,0 +1,471 @@
+#!/usr/bin/env python3
+"""Effort of mra-flow changes in effective hours, and estimate-vs-actual reports.
+
+  mra-effort measure <change-id> [--gap MIN] [--alias TEXT ...] [--logs DIR ...] [--json]
+      hours the agent or the user was active on the change, per phase, from the
+      Claude Code session logs of this orchestrator; plus the unattributed stretches
+      in the change's period, to assign or ignore
+  mra-effort record <initiative> <change-id> --phase PHASE=HOURS ... [--actual HOURS]
+      write the confirmed hours into docs/roadmap/<initiative>.md (Actual (h) and
+      the "Actuals by phase" table)
+  mra-effort report <initiative>
+      recompute the roadmap's Total lines and regenerate
+      docs/roadmap/<initiative>-effort.md (variance by slice, hours by phase)
+
+Active time: consecutive timestamped events of a session (its subagents included)
+no more than --gap minutes apart (default 10). Each interval goes to the /mra-*
+command in progress in that session, and counts for <change-id> when the command's
+arguments name it (or one of --alias). Parallel sessions are summed, not merged.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+ROADMAPS = ROOT / "docs" / "roadmap"
+CHANGES = ROOT / "openspec" / "changes"
+
+PHASES = ("grill", "prototype", "research", "propose", "track", "build", "verify", "fix",
+          "update", "archive", "hotfix", "other")
+COMMAND_PHASE = {
+    "mra-grill": "grill", "mra-prototype": "prototype", "mra-research": "research",
+    "mra-propose": "propose", "mra-track": "track", "mra-build": "build",
+    "mra-verify": "verify", "mra-qa-ui": "verify", "mra-fix": "fix", "mra-update": "update",
+    "mra-archive": "archive", "mra-hotfix": "hotfix", "mra-drift": "other",
+    "mra-sync": "other", "mra-explore": "other", "mra-roadmap": "other",
+}
+COMMAND = re.compile(r"<command-name>/?([\w:.-]+)</command-name>"
+                     r"(?:\s*<command-args>(.*?)</command-args>)?", re.S)
+RANGE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*(?:[-–]\s*(\d+(?:\.\d+)?))?\s*$")
+INJECTED = ("<", "Base directory for this skill", "Skill /", "(Re-invocation", "[Request interrupted")
+MIN_STRETCH_H = 0.05  # unattributed stretches shorter than 3 minutes are noise
+
+
+class Refusal(Exception):
+    pass
+
+
+# ---------------------------------------------------------------- measure
+
+def default_logs() -> list[Path]:
+    config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+    return [config / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(ROOT))]
+
+
+def _timestamp(record: dict) -> float | None:
+    value = record.get("timestamp")
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def _text(record: dict) -> str:
+    content = (record.get("message") or {}).get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(b.get("text", "") for b in content
+                        if isinstance(b, dict) and b.get("type") == "text")
+    return ""
+
+
+def _records(path: Path):
+    with path.open(encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            try:
+                record = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(record, dict):
+                yield record
+
+
+@dataclass
+class Event:
+    t: float
+    command: tuple[str, str] | None = None  # (name, args) of an mra command typed here
+    prompt: str = ""                          # first words of a plain user prompt
+
+
+def session_events(main: Path) -> list[Event]:
+    events = []
+    for record in _records(main):
+        t = _timestamp(record)
+        if t is None:
+            continue
+        event = Event(t)
+        if record.get("type") == "user":
+            text = _text(record)
+            found = COMMAND.search(text)
+            if found:
+                event.command = (found.group(1), (found.group(2) or "").strip())
+            elif text.strip() and not text.lstrip().startswith(INJECTED):
+                event.prompt = " ".join(text.split())[:70]
+        events.append(event)
+    for sub in sorted((main.parent / main.stem / "subagents").glob("*.jsonl")):
+        events.extend(Event(t) for t in (_timestamp(r) for r in _records(sub)) if t is not None)
+    events.sort(key=lambda e: e.t)
+    return events
+
+
+def known_change_ids() -> set[str]:
+    ids = set()
+    if CHANGES.is_dir():
+        for path in CHANGES.iterdir():
+            if path.is_dir() and path.name != "archive":
+                ids.add(path.name)
+        for path in (CHANGES / "archive").glob("*"):
+            if path.is_dir():
+                ids.add(re.sub(r"^\d{4}-\d{2}-\d{2}-", "", path.name))
+    return ids
+
+
+def _names(args: str, name: str) -> bool:
+    return re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", args) is not None
+
+
+@dataclass
+class Stretch:
+    session: str
+    start: float
+    end: float
+    hours: float
+    context: str
+    prompt: str
+
+
+@dataclass
+class Measure:
+    phases: dict[str, float] = field(default_factory=dict)
+    unattributed: list[Stretch] = field(default_factory=list)
+    sessions: int = 0
+
+
+def measure(change: str, aliases: list[str], logs: list[Path], gap_min: float) -> Measure:
+    others = known_change_ids() - {change}
+    names = [change, *aliases]
+    gap = gap_min * 60
+    result = Measure()
+    runs: list[Stretch] = []
+    period: list[float] = []
+    for directory in logs:
+        for main in sorted(directory.glob("*.jsonl")):
+            events = session_events(main)
+            context: tuple[str, str] | None = None
+            prompt, previous, run = "", None, None
+            for event in events:
+                if previous is not None and event.t - previous <= gap:
+                    hours = (event.t - previous) / 3600
+                    phase = None
+                    if context and context[0] in COMMAND_PHASE and any(_names(context[1], n) for n in names):
+                        phase = COMMAND_PHASE[context[0]]
+                    if phase:
+                        result.phases[phase] = result.phases.get(phase, 0.0) + hours
+                        period.extend((previous, event.t))
+                        run = None
+                    elif not (context and any(_names(context[1], o) for o in others)):
+                        label = f"/{context[0]} {context[1]}".strip() if context else "(no command)"
+                        if run is None or run.context != label or previous - run.end > gap:
+                            run = Stretch(main.stem[:8], previous, event.t, 0.0, label, prompt)
+                            runs.append(run)
+                        run.end, run.hours = event.t, run.hours + hours
+                    else:
+                        run = None
+                else:
+                    run = None
+                if event.command and event.command[0] not in ("clear",):
+                    if event.command[0].startswith("mra-"):
+                        context, prompt = event.command, ""
+                if event.prompt:
+                    prompt = event.prompt  # the latest prompt labels the next stretch
+                    if run is not None and not run.prompt:
+                        run.prompt = prompt
+                previous = event.t
+            result.sessions += 1
+    if period:
+        first, last = min(period) - 24 * 3600, max(period)
+        result.unattributed = sorted((r for r in runs
+                                      if r.hours >= MIN_STRETCH_H and r.end > first and r.start < last),
+                                     key=lambda r: r.start)
+    return result
+
+
+def _clock(t: float) -> str:
+    return datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d %H:%M")
+
+
+def print_measure(change: str, result: Measure, gap: float, as_json: bool) -> None:
+    total = sum(result.phases.values())
+    if as_json:
+        print(json.dumps({
+            "change": change, "gap_minutes": gap, "hours": round(total, 2),
+            "phases": {p: round(h, 2) for p, h in sorted(result.phases.items(), key=lambda x: PHASES.index(x[0]))},
+            "unattributed": [{"session": s.session, "start": _clock(s.start), "end": _clock(s.end),
+                              "hours": round(s.hours, 2), "context": s.context, "prompt": s.prompt}
+                             for s in result.unattributed],
+        }, indent=2))
+        return
+    print(f"{change}: {fmt(total)} h attributed (gap {fmt(gap)} min, {result.sessions} sessions)")
+    for phase in PHASES:
+        if result.phases.get(phase):
+            hours = result.phases[phase]
+            print(f"  {phase:<10} {fmt(hours) if hours >= 0.05 else '<0.1'} h")
+    if result.unattributed:
+        print("unattributed stretches in the change's period (assign to a phase or ignore):")
+        for i, s in enumerate(result.unattributed, 1):
+            print(f"  {i:>2}  {_clock(s.start)}-{_clock(s.end)[11:]} UTC  {fmt(s.hours)} h  "
+                  f"session {s.session}  {s.context}  \"{s.prompt}\"")
+
+
+# ---------------------------------------------------------------- roadmap tables
+
+def fmt(value: float) -> str:
+    text = f"{value:.1f}"
+    return text[:-2] if text.endswith(".0") else text
+
+
+def parse_range(cell: str) -> tuple[float, float] | None:
+    found = RANGE.match(cell.replace(",", "."))
+    if not found:
+        return None
+    low = float(found.group(1))
+    return low, float(found.group(2)) if found.group(2) else low
+
+
+def parse_hours(cell: str) -> float | None:
+    found = parse_range(cell)
+    return found[0] if found and found[0] == found[1] else None
+
+
+@dataclass
+class Table:
+    start: int            # index of the header line
+    end: int              # index after the last row
+    header: list[str]
+    rows: list[list[str]]
+
+
+def _cells(line: str) -> list[str]:
+    return [c.strip() for c in line.strip().strip("|").split("|")]
+
+
+def find_table(lines: list[str], heading: str) -> Table | None:
+    try:
+        at = lines.index(heading)
+    except ValueError:
+        return None
+    i = at + 1
+    while i < len(lines) and not lines[i].startswith("|"):
+        if lines[i].startswith("## "):
+            return None
+        i += 1
+    if i >= len(lines):
+        return None
+    start, header = i, _cells(lines[i])
+    i += 2
+    rows = []
+    while i < len(lines) and lines[i].startswith("|"):
+        rows.append(_cells(lines[i]))
+        i += 1
+    return Table(start, i, header, rows)
+
+
+def _line(cells: list[str]) -> str:
+    return "| " + " | ".join(cells) + " |"
+
+
+def render(header: list[str], rows: list[list[str]]) -> list[str]:
+    return [_line(header), "|" + "---|" * len(header), *(_line(r) for r in rows)]
+
+
+def roadmap_path(initiative: str) -> Path:
+    path = ROADMAPS / f"{initiative}.md"
+    if not path.exists():
+        raise Refusal(f"no roadmap {path.relative_to(ROOT)}")
+    return path
+
+
+def slices(lines: list[str]) -> tuple[Table, dict[str, int]]:
+    table = find_table(lines, "## Slices")
+    if table is None:
+        raise Refusal("the roadmap has no Slices table")
+    if any(h.endswith("(d)") for h in table.header):
+        raise Refusal("the roadmap is in days: rename the (d) columns to (h) and convert the figures to hours")
+    col = {h: i for i, h in enumerate(table.header)}
+    for needed in ("Change id", "Goal", "Estimate (h)", "Revised (h)", "Status", "Epic", "Actual (h)"):
+        if needed not in col:
+            raise Refusal(f"the Slices table has no '{needed}' column")
+    return table, col
+
+
+def record(initiative: str, change: str, phases: dict[str, float], actual: float | None) -> None:
+    path = roadmap_path(initiative)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    table, col = slices(lines)
+    row = next((r for r in table.rows if r[col["Change id"]] == change), None)
+    if row is None:
+        raise Refusal(f"{change} is not a slice of {initiative}")
+    total = actual if actual is not None else sum(phases.values())
+    row[col["Actual (h)"]] = fmt(total)
+    lines[table.start:table.end] = render(table.header, table.rows)
+
+    header = ["Change id", *PHASES, "Total"]
+    by_phase = find_table(lines, "## Actuals by phase")
+    new_row = [change, *(fmt(phases[p]) if phases.get(p) else "" for p in PHASES), fmt(total)]
+    if by_phase is None:
+        at = next((i for i, l in enumerate(lines) if l == "## Total"), len(lines))
+        lines[at:at] = ["## Actuals by phase", "",
+                        "Effective hours per phase, written by `mra-effort record` at archive.", "",
+                        *render(header, [new_row]), ""]
+    else:
+        rows = [r for r in by_phase.rows if r[0] != change] + [new_row]
+        order = [r[col["Change id"]] for r in table.rows]
+        rows.sort(key=lambda r: order.index(r[0]) if r[0] in order else len(order))
+        lines[by_phase.start:by_phase.end] = render(header, rows)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _sum(ranges: list[tuple[float, float]]) -> str:
+    return f"{fmt(sum(r[0] for r in ranges))}–{fmt(sum(r[1] for r in ranges))}"
+
+
+def report(initiative: str) -> Path:
+    path = roadmap_path(initiative)
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    table, col = slices(lines)
+    title = next((l[2:] for l in lines if l.startswith("# ")), initiative)
+    live = [r for r in table.rows if r[col["Status"]] != "dropped"]
+
+    estimates = [parse_range(r[col["Estimate (h)"]]) for r in live]
+    forecast, done_actual, done_estimates, done = [], 0.0, [], 0
+    for r, est in zip(live, estimates):
+        actual = parse_hours(r[col["Actual (h)"]]) if r[col["Status"]] == "done" else None
+        if actual is not None:
+            done += 1
+            done_actual += actual
+            forecast.append((actual, actual))
+            if est:
+                done_estimates.append(est)
+        else:
+            chosen = parse_range(r[col["Revised (h)"]]) or est
+            if chosen:
+                forecast.append(chosen)
+    totals = [
+        f"- Estimate: {_sum([e for e in estimates if e])} h",
+        f"- Forecast: {_sum(forecast)} h",
+        f"- Progress: {done}/{len(live)} slices; actual {fmt(done_actual)} h vs. estimated "
+        f"{_sum(done_estimates) if done_estimates else '–'} h",
+    ]
+    at = next((i for i, l in enumerate(lines) if l == "## Total"), None)
+    if at is not None:
+        end = next((i for i in range(at + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+        lines[at:end] = ["## Total", "", *totals, ""]
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    variance_rows, sum_est, sum_act = [], 0.0, 0.0
+    for r, est in zip(live, estimates):
+        actual = parse_hours(r[col["Actual (h)"]]) if r[col["Status"]] == "done" else None
+        upper = est[1] if est else None
+        cells = [r[col.get("#", 0)] if "#" in col else "", r[col["Epic"]], r[col["Change id"]],
+                 r[col["Goal"]], fmt(upper) if upper is not None else "–",
+                 fmt(actual) if actual is not None else "–"]
+        if actual is not None and upper:
+            diff = actual - upper
+            sum_est, sum_act = sum_est + upper, sum_act + actual
+            cells += [f"{diff:+.1f}", f"{diff / upper * 100:+.0f}%", "🔴" if diff > 0 else "🟢"]
+        else:
+            cells += ["", "", "⚪" if actual is None else ""]
+        variance_rows.append(cells)
+    if sum_est:
+        diff = sum_act - sum_est
+        variance_rows.append(["", "", "**Total**", "slices with an estimate and an actual",
+                              fmt(sum_est), fmt(sum_act), f"{diff:+.1f}",
+                              f"{diff / sum_est * 100:+.0f}%", "🔴" if diff > 0 else "🟢"])
+
+    out = [f"<!-- generated by .mra-flow/bin/mra-effort report {initiative}; do not edit -->",
+           f"# {title}: estimate vs. actual", "",
+           "Hours are effective hours. Estimated = the upper bound of the original estimate; "
+           "variance = actual − estimated. 🔴 over the estimate, 🟢 within it, ⚪ not done yet.", "",
+           "## Variance by slice", "",
+           *render(["#", "Epic", "Change id", "Summary", "Estimated (h)", "Actual (h)",
+                    "Variance (h)", "Variance (%)", ""], variance_rows), ""]
+    by_phase = find_table(lines, "## Actuals by phase")
+    if by_phase and by_phase.rows:
+        used = [i for i in range(1, len(by_phase.header) - 1)
+                if any(parse_hours(r[i]) for r in by_phase.rows if i < len(r))]
+        header = [by_phase.header[0], *(by_phase.header[i] for i in used), by_phase.header[-1]]
+        rows = [[r[0], *(r[i] for i in used), r[-1]] for r in by_phase.rows]
+        sums = [fmt(sum(parse_hours(r[i]) or 0 for r in by_phase.rows)) for i in [*used, len(by_phase.header) - 1]]
+        rows.append(["**Total**", *sums])
+        out += ["## Hours by phase", "", *render(header, rows), ""]
+    target = ROADMAPS / f"{initiative}-effort.md"
+    target.write_text("\n".join(out), encoding="utf-8")
+    return target
+
+
+# ---------------------------------------------------------------- CLI
+
+def _phase_arg(value: str) -> tuple[str, float]:
+    name, _, hours = value.partition("=")
+    if name not in PHASES:
+        raise argparse.ArgumentTypeError(f"unknown phase {name!r}; one of {', '.join(PHASES)}")
+    try:
+        return name, float(hours.replace(",", "."))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not PHASE=HOURS") from None
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="mra-effort", description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    m = sub.add_parser("measure")
+    m.add_argument("change")
+    m.add_argument("--gap", type=float, default=10.0)
+    m.add_argument("--alias", action="append", default=[])
+    m.add_argument("--logs", action="append", type=Path)
+    m.add_argument("--json", action="store_true")
+    r = sub.add_parser("record")
+    r.add_argument("initiative")
+    r.add_argument("change")
+    r.add_argument("--phase", action="append", type=_phase_arg, default=[])
+    r.add_argument("--actual", type=float)
+    p = sub.add_parser("report")
+    p.add_argument("initiative")
+    args = parser.parse_args(argv)
+    try:
+        if args.cmd == "measure":
+            logs = args.logs or default_logs()
+            missing = [d for d in logs if not d.is_dir()]
+            if missing:
+                raise Refusal(f"no Claude Code session logs in {missing[0]} (use --logs DIR)")
+            print_measure(args.change, measure(args.change, args.alias, logs, args.gap), args.gap, args.json)
+        elif args.cmd == "record":
+            phases: dict[str, float] = {}
+            for name, hours in args.phase:
+                phases[name] = phases.get(name, 0.0) + hours
+            if not phases and args.actual is None:
+                raise Refusal("give --phase PHASE=HOURS (one or more) or --actual HOURS")
+            record(args.initiative, args.change, phases, args.actual)
+            print(f"recorded {args.change} in docs/roadmap/{args.initiative}.md")
+        else:
+            print(f"wrote {report(args.initiative).relative_to(ROOT)}")
+    except Refusal as exc:
+        print(f"mra-effort: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -125,7 +125,7 @@ flowchart TB
         rm0 --> rm1["mattpocock-skills:grilling<br/>breadth-first"]:::mp
         rm0 --> rm2["mattpocock-skills:domain-modeling"]:::mp
         rm1 -. "cut or size depends on it" .-> rm5["recommend /mra-prototype · /mra-research"]:::step
-        rm1 & rm2 --> rm3["slices · sizes · person-day ranges<br/>reference class: done slices' actuals"]:::step
+        rm1 & rm2 --> rm3["slices · sizes · hour ranges<br/>reference class: done slices' actuals"]:::step
         rm3 --> rm4["bd create<br/>initiative epic + 1 epic per slice · bd dep add"]:::bd
         rm4 --> rmA["docs/roadmap/#lt;initiative#gt;.md<br/>slices · estimates · totals · ADRs · glossary"]:::art
     end
