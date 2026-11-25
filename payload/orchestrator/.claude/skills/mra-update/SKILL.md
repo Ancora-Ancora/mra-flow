@@ -27,5 +27,6 @@ Revise the change's artifacts, then reconcile the work already tracked or built 
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Never edit code here.
 - Never tick `tasks.md` checkboxes here; beads holds live status.

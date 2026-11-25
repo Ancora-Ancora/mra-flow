@@ -31,5 +31,6 @@ Create the OpenSpec change for `$ARGUMENTS` with all artifacts of the `mra-flow`
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Never write code or create beads issues in this phase.
 - Do not commit; list the changed files and let the user decide.

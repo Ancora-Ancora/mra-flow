@@ -56,6 +56,7 @@ Bugs (`-t bug`) are never part of the check: they live only in beads. Every mism
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - `tasks.md` checkboxes stay unticked; beads holds live status.
 - Task numbers are stable once tracked: never renumber a task, never reuse the number of a removed one.
 - A task missing its `[<key>]` tag, or naming a key not declared in `mra-flow.toml`: stop and ask, do not guess the repo.

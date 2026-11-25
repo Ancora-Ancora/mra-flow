@@ -27,6 +27,7 @@ Build a throwaway prototype that settles the design question in `$ARGUMENTS`, re
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - The `prototype/<slug>` branch is never merged, pushed or rebased onto a change branch; `/mra-build` rebuilds the validated behaviour test-first from the specs.
 - Create no beads issues; the only beads write is the epic note in step 7.
 - Do not commit in the orchestrator; list the changed files (prototype note and screenshots, ADR, glossary) and let the user decide.

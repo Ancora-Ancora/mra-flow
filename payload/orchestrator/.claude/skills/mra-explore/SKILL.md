@@ -20,4 +20,5 @@ Open-ended exploration of `$ARGUMENTS`, grounded in this orchestrator's domain d
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Exploration writes no code, no ADRs, no beads issues. Decisions are recorded in `/mra-grill`.

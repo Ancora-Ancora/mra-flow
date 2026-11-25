@@ -33,9 +33,10 @@ Only create worktrees for repos that have tasks (a `repo:<key>` label on an open
    - Execution method is already chosen: subagent-driven. Ask the user only to review the plan.
 5. **Execute.** Call the Skill tool with `superpowers:subagent-driven-development` for `plan.md`, with `superpowers:test-driven-development` for every task. The SDD ledger (`.superpowers/sdd/…/progress.md`) is SDD's recovery map; beads stays the source of truth. As controller, around each plan task:
    - **before dispatch:** check the issue is in `bd ready --parent <epic>` (its dependencies are closed); stop and report if it is not. Then `bd update <bd-id> --claim`.
+   - **name the bd id in every dispatch prompt:** the implementer, reviewer, re-reviewer and fix prompts each state the task's bd id (`<bd-id>`), so `mra-effort breakdown` can attribute the subagent's hours and tokens to the task at archive.
    - **in the implementer brief:** the worktree path and the exact commit message above. The implementer commits; the controller does not commit.
    - **review packages:** SDD's `scripts/` resolve the git repo from the current directory. Run `sdd-workspace` from the orchestrator root (the workspace lives there, next to `plan.md`), but run `review-package` from inside the task's worktree, with the 4th argument `OUTFILE` set to `<workspace>/review-<base7>..<head7>.diff`.
-   - **when the ledger records `Task N: complete`:** `bd close <bd-id> --reason "<summary>; commit <sha>"`.
+   - **when the ledger records `Task N: complete`:** `bd close <bd-id> --reason "<summary>; commit <sha>"`, then `bd update <bd-id> --set-metadata models="<role>=<model>; ..."` with every model that worked on the task (implementer, reviewers, fix rounds; see *Record* in `.mra-flow/docs/agents/model-display.md`). After step 6, the same key on the epic for the final reviews.
    - **on resume after compaction:** for each `Task N: complete` in the ledger whose issue is still open, close it; never re-dispatch a completed task.
    - **integration task (end-to-end check):** the implementer writes the check as a script that reruns unattended against live servers, and commits it in the task's repo: in the repo's e2e suite when it has one, else as a standalone script (e.g. `e2e/<change-id>.<ext>`, with the setup it needs written at its top). Never only in a scratchpad or the SDD workspace, which die with the session. The close reason names the command that runs it; `/mra-verify` reruns that command.
    - **progress bar:** see *Progress bar* below; print it at every step listed there.
@@ -51,20 +52,23 @@ Only create worktrees for repos that have tasks (a `repo:<key>` label on an open
 
 ## Progress bar
 
-From plan approval (step 4) until the last task closes, every message the controller writes to the user starts with a two-line progress block, so the user always sees where the build stands: the epic's tasks on the first line, the current task on the second, with both bars starting in the same column.
+From plan approval (step 4) until the last task closes, every message the controller writes to the user starts with a three-line progress block, so the user always sees where the build stands and which model is working: the epic's tasks on the first line, the current task on the second, with both bars starting in the same column, and the model line under them.
 
 ```
 Tasks done     [███████ 4/10 ░░░░░░░] mra-build <change-id>
 Current Task 5 [███████ 60% ░░░░░░░░] spec review | [<bd-id>] <title>
+Model          Sonnet 5.5 (reviewer) · session Opus 5.5
 ```
 
 - **Line 1, tasks:** `Tasks done`, padded with spaces so its bar starts in the same column as line 2's, then the bar, then `mra-build <change-id>`. The bar has 20 cells: `█` cells = `round(20 × closed / total)`, then one `▓` cell for the task in flight (none when idle), the rest `░`; then ` <closed>/<total> ` overwrites the cells starting at `(20 - its length) // 2`. `closed` and `total` count the epic's children (`bd children <epic>`), so the bar survives compaction and grows when step 6 adds bugs to the epic. Read them from beads, never from memory.
 - **Line 2, current task:** `Current Task <N>` (its plan task number), then its own bar with the percentage inside it, then the stage, then `| [<bd-id>] <title>`. Stages: `claimed` → `implementing` → `spec review` → `quality review` → `fixing review` → `closed`. During step 6 it reads `final review <key>` (or the fix being worked on); with nothing in flight, `idle`.
 - **Task bar:** 20 cells, the same length as line 1's bar: `█` cells = `round(20 × percentage / 100)`, the rest `░`, then the percentage padded with one space each side (` 60% `, ` 100% `) overwrites the cells starting at `(20 - its length) // 2`, so the bar keeps its 20-cell width. The controller cannot see inside a running subagent, so the percentage is an estimate from the stage: `claimed` ~5%, `implementing` 10-50%, `spec review` / `quality review` 60-80%, `fixing review` ~85%, `closed` 100%; the stage after the bar already marks it as an estimate, so no `~`. Refine it as reports arrive (e.g. a fix round lowers it back into the review range), and never let it reach 100% before `bd close`. With nothing in flight, the bar is full after a close and empty when idle before the first dispatch.
+- **Line 3, model:** `Model`, padded like line 1 so its text starts in the bars' column, then the friendly name and role of the subagent working on the current stage (`implementer`, `reviewer`, `fix round <n>`, `final review <key>`), then ` · session <model>` for the controller's own model; with no subagent in flight, only `session <model>`. A subagent dispatched without an explicit model shows `(<role>, inherited)`. It changes as soon as the role or model changes (an escalated fix round, the final review on the most capable model, a `/model` switch). This is the build's form of the model line of `.mra-flow/docs/agents/model-display.md`.
 - **When:** after plan approval, before each dispatch, after each implementer or reviewer report, after each `bd close`, and on resume after compaction. Print it as plain text (a fenced code block), not through a todo list: beads stays the source of truth.
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Beads is the source of truth for task status; session todo lists are scratch only.
 - Do not tick `tasks.md`, and do not run `/opsx:apply`.
 - Do not merge, push, or open PRs here, and do not run `finishing-a-development-branch`; that is `/mra-archive`.

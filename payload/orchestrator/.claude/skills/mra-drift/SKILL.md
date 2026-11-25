@@ -36,5 +36,6 @@ Check whether `openspec/specs/` still describes the real behaviour of the code i
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Read-only: never edit, create or commit any file, and never create or update a beads issue.
 - Report in the user's language; any artifact created afterwards is written in English.

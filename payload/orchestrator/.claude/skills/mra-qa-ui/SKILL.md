@@ -69,6 +69,7 @@ Check what the user sees on the screens the change touches, in three levels orde
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Do not fix anything here; report and file. A fix goes through `/mra-fix`, test first.
 - A page "looks fine" is not evidence: the smoke summary or a saved screenshot is.
 - Level 3 runs only where level 2 cannot settle it; never browse every page interactively.

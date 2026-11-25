@@ -28,7 +28,7 @@ Integrate each repo's branch, then archive the OpenSpec change and close the bea
      - **block** — a DRIFT-SPEC on a requirement this change's delta MODIFIES, REMOVES or RENAMES → `/mra-update <change-id>` (fold the colleague's behaviour into the delta), then `/mra-verify`;
      - **block** — a DRIFT-CODE → `bd create -t bug --parent <epic>` and `/mra-fix <change-id>` if this change caused it, else outside the epic with label `needs-triage`; ask the user which;
      - **block** — a colleague's commit touches a file this change also touches (compare with `git -C .worktrees/<change-id>/<key> diff --name-only $base`) → rebase or merge `origin/<default-branch>` into `change/<change-id>`, then `/mra-verify`;
-     - **pass, with a note** — a DRIFT-SPEC only on requirements this change does not touch → record it in the epic notes and, after step 7, recommend a spec-only sync change as `/mra-drift` step 10 describes.
+     - **pass, with a note** — a DRIFT-SPEC only on requirements this change does not touch → record it in the epic notes and, after step 8, recommend a spec-only sync change as `/mra-drift` step 10 describes.
 
 2. **Integrate each repo.** For each worktree in `.worktrees/<change-id>/`, in integration order (`.mra-flow/bin/mra-repo list`: dependencies first):
    - If `.mra-flow/bin/mra-repo integration` prints a command, the project integrates its own way: ask the user per repo to integrate or keep. Integrate → `.mra-flow/bin/mra-repo integrate <key> change/<change-id>`; its last output line is the outcome. A non-zero exit → stop and report its output; never retry or work around it.
@@ -41,10 +41,12 @@ Integrate each repo's branch, then archive the OpenSpec change and close the bea
 6. **Close the epic:** `bd close <epic> --reason "archived; <key>: <sha/PR>, ..."` (one entry per integrated repo).
    **Roadmap**, for a slice: set its row's Status to `done`, then run `.mra-flow/bin/mra-effort record <initiative> <change-id> --phase <phase>=<hours> ...` with the confirmed figures and `.mra-flow/bin/mra-effort report <initiative>` (totals and `docs/roadmap/<initiative>-effort.md`); add a Log line (`<change-id> done: actual <n> h vs. estimate <range> h (<variance %>)`). Show the slice's row of the variance table. If every slice is now `done` or `dropped`, offer to close the initiative epic and set the front matter `status: done`.
    **No roadmap**: if the change is a slice of no roadmap and its epic has no `roadmap: declined` note, check the late signals of *A roadmap found missing late* in `.mra-flow/docs/agents/roadmap.md`; when one holds, recommend `/mra-roadmap --retro <initiative>` once, after this archive completes, naming the related archived changes. A decline is recorded in the closed epic's notes.
-7. **Orchestrator commit.** Show `git status` (the roadmap file included, when updated) and the proposed message, e.g. `Archive <change-id> (<key> <sha/PR>, ...)`, and commit after the user confirms.
+7. **Effort and model breakdown** (every change, not only roadmap slices): run `.mra-flow/bin/mra-effort breakdown <change-id>` (same `--alias` as for `measure`) and show its Markdown table as the closing summary: the change (epic) first with its total hours and tokens per model, then every task with its hours and the models and tokens it used, then `other` and `session`. See *Record* in `.mra-flow/docs/agents/model-display.md`.
+8. **Orchestrator commit.** Show `git status` (the roadmap file included, when updated) and the proposed message, e.g. `Archive <change-id> (<key> <sha/PR>, ...)`, and commit after the user confirms.
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Never archive with open bugs or a stale verify.
 - Never skip the drift gate: colleagues' commits on the default branch never update `openspec/specs/`, and the delta specs merge on top of it.
 - If the user chose "keep" for a repo, stop after step 2: the change is not integrated yet.

@@ -17,7 +17,7 @@ Fix the change's open bugs one at a time, root cause first, test first.
    - `bd update <id> --claim`
    - **Diagnose** in the bug's worktree `.worktrees/<change-id>/<key>`, with the skill chosen by the table below. Find the root cause before any fix; record it with `bd update <id> --append-notes "debug skill: <name>; root cause: ..."`.
    - **Fix:** call the Skill tool with `superpowers:test-driven-development`. If diagnosis already produced a failing test that reproduces the bug, that test is the RED step: reuse it, do not write a second one. Otherwise write it first. For a `qa-ui` bug, write the RED test at the lowest level that reproduces it: a component/unit test first, an e2e test only when the defect needs the full app. Then the minimal fix, then green.
-   - Commit citing `<id>` and `<change-id>`; `bd close <id> --reason "<root cause + fix, commit sha>"`.
+   - Commit citing `<id>` and `<change-id>`; `bd close <id> --reason "<root cause + fix, commit sha>"`, then `bd update <id> --set-metadata models="<role>=<model>; ..."` (see *Record* in `.mra-flow/docs/agents/model-display.md`).
    - A new defect discovered on the way: file it with `--deps discovered-from:<id>`, do not fold it in.
 4. Repeat step 2 until no bug is ready.
 5. End with the next command: `/mra-verify <change-id>` (always re-verify after fixes).
@@ -41,5 +41,6 @@ Call the Skill tool with `mattpocock-skills:diagnosing-bugs` if **any** of these
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - No fix without a reproducing test.
 - If a bug shows a spec or design is wrong, stop and tell the user: the artifacts change first (`/mra-update <change-id>`), then the code.

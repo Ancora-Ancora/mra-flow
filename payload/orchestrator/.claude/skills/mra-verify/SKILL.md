@@ -26,10 +26,11 @@ Prove the change does what its specs say, in each touched repo and across the co
    ```
    Do not add `--deps discovered-from:<epic>`: `--parent` already links the epic, and bd rejects a second dependency on the same issue.
    A Plan check mismatch is filed with the label `plan-drift` instead of `repo:<key>` (add `repo:<key>` only when the task names one): `-l plan-drift,verify`.
-9. Record the outcome: `bd update <epic> --append-notes "verify <date>: PASS|FAIL, <n> bugs, qa-ui: <result>, <commands run>"`.
+9. Record the outcome: `bd update <epic> --append-notes "verify <date>: PASS|FAIL, <n> bugs, qa-ui: <result>, <commands run>"` and `bd update <epic> --set-metadata models="<existing value>; verify=<model>; qa-ui=<model>"` (append to what build recorded; see *Record* in `.mra-flow/docs/agents/model-display.md`).
 10. End with a pass/fail table per check, then the next command: `/mra-update <change-id>` if `plan-drift` bugs are open (reconcile the plan before fixing code), else `/mra-fix <change-id>` if bugs are open, else `/mra-archive <change-id>`.
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Do not fix anything here; report and file.
 - "Should pass" is not evidence: run it.

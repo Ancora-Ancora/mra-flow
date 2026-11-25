@@ -19,4 +19,5 @@ Merge the change's delta specs into `openspec/specs/` without archiving it. `/mr
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Do not tick `tasks.md`, close beads issues, or archive here.

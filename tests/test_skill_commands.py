@@ -204,3 +204,48 @@ class RoadmapTest(unittest.TestCase):
             text = self.skill(name)
             self.assertIn("*A roadmap found missing late*", text, name)
             self.assertIn("`/mra-roadmap --retro <initiative>` once", text, name)
+
+
+MODEL_DISPLAY = PAYLOAD / "orchestrator" / ".mra-flow" / "docs" / "agents" / "model-display.md"
+
+
+class ModelDisplayTest(unittest.TestCase):
+    def test_rule_file_defines_the_model_line(self):
+        text = MODEL_DISPLAY.read_text(encoding="utf-8")
+        self.assertIn("`Model: <model> (<role>)`", text)
+        self.assertIn("subagentStatusLine", text)
+
+    def test_every_phase_skill_points_to_the_rule(self):
+        # The user always sees which model runs each phase and each subagent:
+        # every mra-* skill points to the same rule.
+        for path in sorted(SKILLS.glob("mra-*/SKILL.md")):
+            self.assertIn("`.mra-flow/docs/agents/model-display.md`", path.read_text(encoding="utf-8"), path.parent.name)
+
+    def test_build_progress_block_has_a_model_line(self):
+        text = (SKILLS / "mra-build" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Model          ", text)
+        self.assertIn("three-line progress block", text)
+
+
+class ModelRecordTest(unittest.TestCase):
+    def test_models_are_recorded_on_the_issue(self):
+        # Which model did each task's work stays on the issue, after the
+        # conversation is gone.
+        rule = MODEL_DISPLAY.read_text(encoding="utf-8")
+        self.assertIn("\n## Record\n", rule)
+        self.assertIn("--set-metadata models=", rule)
+        for name in ("mra-build", "mra-fix", "mra-hotfix", "mra-verify"):
+            text = (SKILLS / name / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("--set-metadata models=", text, name)
+
+
+class EffortBreakdownSkillTest(unittest.TestCase):
+    def test_archive_shows_the_breakdown(self):
+        text = (SKILLS / "mra-archive" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("mra-effort breakdown <change-id>", text)
+        self.assertIn("every change", text)
+
+    def test_build_names_the_bd_id_in_dispatch_prompts(self):
+        text = (SKILLS / "mra-build" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("name the bd id in every dispatch prompt", text)
+        self.assertIn("mra-effort breakdown", text)

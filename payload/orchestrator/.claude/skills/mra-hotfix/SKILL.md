@@ -31,7 +31,7 @@ One bug, one cycle: track, isolate, diagnose, fix test-first, verify, integrate.
 5. **Fix.** Call the Skill tool with `superpowers:test-driven-development`. A failing test from diagnosis is the RED step: reuse it. Then the minimal fix, then green. Commit with the message above. A new defect found on the way gets its own `hotfix` issue with `--deps discovered-from:<id>`; it is not folded in.
 6. **Verify.** Call the Skill tool with `superpowers:verification-before-completion`. In each touched worktree: full test suite, linter, build; the scenario's test passes. If the bug crosses a contract between two code repos, also run the contract checks of `/mra-verify` step 4. If the fix touches a repo's `ui_paths` (`.mra-flow/bin/mra-repo ui-paths <key>`), run the steps of `.claude/skills/mra-qa-ui/SKILL.md` scoped to the screens the fix touches, with `.worktrees/hotfix-<bd-id>/` in place of `.worktrees/<change-id>/` and the hotfix issue in place of the epic (findings with `--deps discovered-from:<id>`, no `--parent`). Record the evidence: `bd update <id> --append-notes "verify <date>: PASS, <commands and results>"`. A failure goes back to step 4.
 7. **Integrate.** Per touched repo, in integration order (`.mra-flow/bin/mra-repo list`: dependencies first): if `.mra-flow/bin/mra-repo integration` prints a command, ask the user to integrate or keep, and integrate with `.mra-flow/bin/mra-repo integrate <key> hotfix/<bd-id>` (its last output line is the outcome; a non-zero exit → stop and report, never retry); otherwise call the Skill tool with `superpowers:finishing-a-development-branch` and let the user choose (merge locally, push + PR, keep). If a push needs credentials, look for notes with `bd memories push`. "Keep" → stop here; the issue stays in progress.
-8. **Close:** `bd close <id> --reason "<root cause + fix>; <repo>: <sha/PR>"`.
+8. **Close:** `bd close <id> --reason "<root cause + fix>; <repo>: <sha/PR>"`, then `bd update <id> --set-metadata models="<role>=<model>; ..."` (see *Record* in `.mra-flow/docs/agents/model-display.md`).
 9. **Notify active changes.** For each integrated repo, list its `change/*` worktrees (`git -C <path> worktree list`). For each such change, find its epic (`bd list -t epic -l openspec:<change-id>`) and append: `bd update <epic> --append-notes "hotfix <id> merged into <repo> main <sha>: merge main into change/<change-id> before /mra-verify"`. Leave the change branches untouched.
 10. **Spec drift check.** The fix just changed code behind `<capability>`'s main spec. Recommend `/mra-drift <capability>` to confirm the spec still matches after the fix; the user decides whether to run it now or later.
 11. End with a summary: root cause, fix, verify evidence, integration per repo, epics notified.
@@ -46,5 +46,6 @@ The spec is wrong or silent, so the fix needs new behaviour: stop before any fix
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - No fix without a reproducing test.
 - Code goes only to the hotfix worktrees, never to a code repo's main branch.

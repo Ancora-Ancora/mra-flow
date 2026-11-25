@@ -83,3 +83,7 @@ The five default canonical labels (`needs-triage`, `needs-info`, `ready-for-agen
 ### Domain docs
 
 Single-context by default: one `GLOSSARY.md` + `docs/adr/` at the orchestrator root, shared by all code repos. Multi-context when `docs/GLOSSARY-MAP.md` exists: one `GLOSSARY.md` + `adr/` per code repo under `docs/<repo-key>/`, plus the root `docs/adr/` (and, lazily, `docs/GLOSSARY.md`) for decisions/terms spanning repos. See `.mra-flow/docs/agents/domain.md`.
+
+### Model display
+
+Every `mra-*` phase shows the model at work, its own and each subagent's, as `Model: <model> (<role>)`: at the phase start, with every dispatch and whenever it changes; `/mra-build` prints it as the third line of its progress block. See `.mra-flow/docs/agents/model-display.md`.

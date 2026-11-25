@@ -24,6 +24,7 @@ Answer the factual question in `$ARGUMENTS` from **primary sources**, and save t
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Write only the research note (and the epic note in step 5); create no ADR, spec or beads issue here.
 - Do not commit; list the note and let the user decide.
 - Write the note in English; report to the user in their language.

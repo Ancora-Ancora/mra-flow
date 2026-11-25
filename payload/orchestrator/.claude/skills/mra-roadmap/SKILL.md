@@ -64,6 +64,7 @@ Pick the mode from `$ARGUMENTS`:
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Do not create an OpenSpec change, task issues or code in this skill: only the roadmap file, ADRs, glossary terms and epics.
 - Never rewrite an original estimate or a done row; the log keeps every revision.
 - Do not commit; list the changed files and let the user decide.

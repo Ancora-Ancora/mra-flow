@@ -207,3 +207,132 @@ class MraEffortTest(TmpTestCase):
         self.assertEqual(self.run_effort("record", "demo", "add-z", "--phase", "build=1").returncode, 1)
         self.assertEqual(self.run_effort("record", "demo", "add-a", "--phase", "coding=1").returncode, 2)
         self.assertEqual(self.run_effort("report", "nope").returncode, 1)
+
+    # ---------------------------------------------------------------- breakdown
+
+    PLAN = """# Plan
+
+### Task 1: [bd-11] Build the thing
+
+body
+
+### Task 2: [bd-12] Wire the other thing
+"""
+
+    def assistant(self, minutes, model, inp, cc, cr, out, msg_id):
+        return {"type": "assistant", "timestamp": at(minutes), "message": {
+            "role": "assistant", "id": msg_id, "model": model, "content": "ok",
+            "usage": {"input_tokens": inp, "cache_creation_input_tokens": cc,
+                      "cache_read_input_tokens": cr, "output_tokens": out}}}
+
+    def breakdown_fixture(self):
+        (self.orch / "openspec/changes/add-a/plan.md").write_text(self.PLAN)
+        main = [command(0, "mra-build", "add-a"),
+                self.assistant(2, "claude-opus-5-5-20260101", 10, 0, 0, 90, "m1"),
+                tick(30)]
+        implementer = [user(5, "Implement bd-11 in the worktree for add-a"),
+                       self.assistant(8, "claude-sonnet-5-5", 100, 200, 300, 400, "a1"),
+                       self.assistant(8, "claude-sonnet-5-5", 100, 200, 300, 450, "a1"),  # duplicate id: last wins
+                       self.assistant(12, "claude-sonnet-5-5", 0, 0, 0, 50, "a2")]
+        reviewer = [user(14, "Review .superpowers/sdd/plan-add-a/task-1-brief.md"),
+                    self.assistant(16, "claude-haiku-5-5", 0, 0, 100, 100, "r1")]
+        final = [user(20, "Final review of add-a"),
+                 self.assistant(24, "claude-opus-5-5", 0, 0, 0, 200, "f1")]
+        self.session("s1", main)
+        sub = self.logs / "s1" / "subagents"
+        sub.mkdir(parents=True)
+        for name, records in (("agent-i", implementer), ("agent-r", reviewer), ("agent-f", final)):
+            (sub / f"{name}.jsonl").write_text("\n".join(json.dumps(r) for r in records) + "\n")
+
+    def breakdown(self, *extra):
+        self.breakdown_fixture()
+        done = self.run_effort("breakdown", "add-a", "--logs", str(self.logs), "--json", *extra)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return json.loads(done.stdout)
+
+    def test_breakdown_attributes_subagents_to_tasks(self):
+        data = self.breakdown()
+        rows = {r["key"]: r for r in data["rows"]}
+        self.assertEqual(list(rows), ["1", "2", "other", "session"])
+        task1 = rows["1"]
+        self.assertEqual(task1["bd_id"], "bd-11")
+        self.assertEqual(task1["title"], "Build the thing")
+        # implementer (named by bd id): 5..12 = 7 min; reviewer (task-1-brief path): 2 min
+        self.assertAlmostEqual(task1["hours"], 9 / 60, places=2)
+        models = {m["model"]: m for m in task1["models"]}
+        self.assertEqual(models["Sonnet 5.5"]["tokens"], 100 + 200 + 300 + 450 + 50)
+        self.assertEqual(models["Sonnet 5.5"]["output_tokens"], 500)
+        self.assertEqual(models["Haiku 5.5"]["tokens"], 200)
+        self.assertAlmostEqual(models["Haiku 5.5"]["share"], 200 / 1300, places=3)
+        self.assertEqual(rows["2"]["models"], [])
+        self.assertEqual(rows["other"]["models"][0]["model"], "Opus 5.5")
+        self.assertEqual(rows["other"]["models"][0]["tokens"], 200)
+        self.assertEqual(rows["session"]["models"][0]["tokens"], 100)
+
+    def test_breakdown_epic_totals(self):
+        data = self.breakdown()
+        epic = data["epic"]
+        self.assertAlmostEqual(epic["hours"], 30 / 60, places=2)  # the build command, 0..30
+        self.assertEqual(epic["tokens"], 1100 + 200 + 200 + 100)
+        models = {m["model"]: m for m in epic["models"]}
+        self.assertEqual(models["Sonnet 5.5"]["tokens"], 1100)
+        self.assertAlmostEqual(models["Sonnet 5.5"]["share"], 1100 / 1600, places=3)
+        self.assertEqual(models["Opus 5.5"]["tokens"], 300)
+        self.assertAlmostEqual(epic["task_hours"], 9 / 60, places=2)
+
+    def test_breakdown_text_is_a_markdown_table(self):
+        self.breakdown_fixture()
+        done = self.run_effort("breakdown", "add-a", "--logs", str(self.logs))
+        self.assertEqual(done.returncode, 0, done.stderr)
+        lines = done.stdout.splitlines()
+        self.assertEqual(lines[0], "| Item | Time (h) | Model | Tokens | Output tokens | Share |")
+        self.assertIn("**add-a** (epic)", done.stdout)
+        self.assertIn("Task 1 [bd-11] Build the thing", done.stdout)
+        self.assertIn("1,100", done.stdout)
+        self.assertIn("69%", done.stdout)
+
+    def test_breakdown_without_plan_still_reports_other(self):
+        self.breakdown_fixture()
+        (self.orch / "openspec/changes/add-a/plan.md").unlink()
+        done = self.run_effort("breakdown", "add-a", "--logs", str(self.logs), "--json")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        rows = [r["key"] for r in json.loads(done.stdout)["rows"]]
+        self.assertEqual(rows, ["other", "session"])
+
+    def sub_agent(self, name, records):
+        sub = self.logs / "s1" / "subagents"
+        sub.mkdir(parents=True, exist_ok=True)
+        (sub / f"{name}.jsonl").write_text("\n".join(json.dumps(r) for r in records) + "\n")
+
+    def rows_after(self, *agents):
+        (self.orch / "openspec/changes/add-a/plan.md").write_text(self.PLAN + "\n### Task 10: [bd-110] Tenth\n")
+        self.session("s1", [command(0, "mra-build", "add-a"), tick(30)])
+        for name, records in agents:
+            self.sub_agent(name, records)
+        done = self.run_effort("breakdown", "add-a", "--logs", str(self.logs), "--json")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return {r["key"]: r for r in json.loads(done.stdout)["rows"]}
+
+    def test_breakdown_uses_only_the_first_user_message(self):
+        later = [user(5, "Review the add-a work"),
+                 self.assistant(6, "claude-sonnet-5-5", 0, 0, 0, 10, "x1"),
+                 user(7, "tool result mentions bd-12 and plan-add-a/task-2-brief.md")]
+        rows = self.rows_after(("agent-l", later))
+        self.assertNotIn("bd-12", [r["bd_id"] for r in rows.values() if r["models"]])
+        self.assertEqual(rows["2"]["models"], [])
+        self.assertEqual(rows["other"]["models"][0]["tokens"], 10)
+
+    def test_task_path_fallback_needs_this_changes_plan_folder(self):
+        agent = [user(5, "Review add-a using .superpowers/sdd/plan-other-change/task-2-brief.md"),
+                 self.assistant(6, "claude-sonnet-5-5", 0, 0, 0, 10, "x1")]
+        rows = self.rows_after(("agent-p", agent))
+        self.assertEqual(rows["2"]["models"], [])
+        self.assertEqual(rows["other"]["models"][0]["tokens"], 10)
+
+    def test_bd_ids_match_as_whole_tokens(self):
+        agent = [user(5, "Implement bd-110 for add-a"),
+                 self.assistant(6, "claude-sonnet-5-5", 0, 0, 0, 10, "x1")]
+        rows = self.rows_after(("agent-t", agent))
+        self.assertEqual(rows["10"]["models"][0]["tokens"], 10)
+        self.assertEqual(rows["1"]["models"], [])
+

@@ -34,6 +34,7 @@ Stress-test the idea in `$ARGUMENTS` and record its outcomes as domain docs, bef
 
 ## Rules
 
+- Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
 - Do not create an OpenSpec change or write code in this phase.
 - Never edit a roadmap: report its impact; `/mra-roadmap` revises it.
 - Do not commit; list the changed files and let the user decide.

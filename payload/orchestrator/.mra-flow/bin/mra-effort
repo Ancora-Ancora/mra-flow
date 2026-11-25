@@ -5,6 +5,11 @@
       hours the agent or the user was active on the change, per phase, from the
       Claude Code session logs of this orchestrator; plus the unattributed stretches
       in the change's period, to assign or ignore
+  mra-effort breakdown <change-id> [--gap MIN] [--alias TEXT ...] [--logs DIR ...] [--json]
+      Markdown table for the archive summary: the change (epic) first with its total
+      hours and tokens per model, then every plan task with its subagents' hours and
+      tokens per model, then `other` (change subagents matching no task) and `session`
+      (the controller's own work)
   mra-effort record <initiative> <change-id> --phase PHASE=HOURS ... [--actual HOURS]
       write the confirmed hours into docs/roadmap/<initiative>.md (Actual (h) and
       the "Actuals by phase" table)
@@ -16,6 +21,10 @@ Active time: consecutive timestamped events of a session (its subagents included
 no more than --gap minutes apart (default 10). Each interval goes to the /mra-*
 command in progress in that session, and counts for <change-id> when the command's
 arguments name it (or one of --alias). Parallel sessions are summed, not merged.
+
+breakdown attributes each subagent (its first prompt) to the change by the change id,
+an alias or a task's bd id, and to a task by the bd id, else by a `task-N-` path; tokens
+are input + cache creation + cache read + output of its assistant records.
 """
 from __future__ import annotations
 
@@ -149,6 +158,7 @@ class Measure:
     phases: dict[str, float] = field(default_factory=dict)
     unattributed: list[Stretch] = field(default_factory=list)
     sessions: int = 0
+    intervals: dict[Path, list[tuple[float, float]]] = field(default_factory=dict)
 
 
 def measure(change: str, aliases: list[str], logs: list[Path], gap_min: float) -> Measure:
@@ -172,6 +182,7 @@ def measure(change: str, aliases: list[str], logs: list[Path], gap_min: float) -
                     if phase:
                         result.phases[phase] = result.phases.get(phase, 0.0) + hours
                         period.extend((previous, event.t))
+                        result.intervals.setdefault(main, []).append((previous, event.t))
                         run = None
                     elif not (context and any(_names(context[1], o) for o in others)):
                         label = f"/{context[0]} {context[1]}".strip() if context else "(no command)"
@@ -225,6 +236,154 @@ def print_measure(change: str, result: Measure, gap: float, as_json: bool) -> No
         for i, s in enumerate(result.unattributed, 1):
             print(f"  {i:>2}  {_clock(s.start)}-{_clock(s.end)[11:]} UTC  {fmt(s.hours)} h  "
                   f"session {s.session}  {s.context}  \"{s.prompt}\"")
+
+
+# ---------------------------------------------------------------- breakdown
+
+@dataclass
+class Task:
+    number: str
+    bd_id: str
+    title: str
+
+
+def plan_tasks(change: str) -> list[Task]:
+    plans = [CHANGES / change / "plan.md", *sorted((CHANGES / "archive").glob(f"*-{change}/plan.md"))]
+    plan = next((p for p in plans if p.is_file()), None)
+    if plan is None:
+        return []
+    heading = re.compile(r"^###\s+Task\s+(\d+):\s*\[([^\]]+)\]\s*(.*?)\s*$")
+    return [Task(m.group(1), m.group(2), m.group(3))
+            for m in map(heading.match, plan.read_text(encoding="utf-8").splitlines()) if m]
+
+
+def model_name(model: str) -> str:
+    base = re.sub(r"-\d{8}$", "", model.removeprefix("anthropic."))
+    found = re.fullmatch(r"claude-([a-z]+)-(\d+(?:-\d+)*)", base)
+    if not found:
+        return base or "unknown"
+    return f"{found.group(1).capitalize()} {found.group(2).replace('-', '.')}"
+
+
+def _usage(records: list[dict]) -> list[tuple[float, str, int, int]]:
+    """(time, friendly model, tokens, output tokens) per distinct assistant message."""
+    last: dict[str, dict] = {}
+    for i, r in enumerate(records):
+        message = r.get("message") or {}
+        if r.get("type") != "assistant" or not isinstance(message.get("usage"), dict) or not message.get("model"):
+            continue
+        last[message.get("id") or f"#{i}"] = r
+    out = []
+    for r in last.values():
+        u, t = r["message"]["usage"], _timestamp(r)
+        if t is None:
+            continue
+        output = int(u.get("output_tokens") or 0)
+        total = output + sum(int(u.get(k) or 0) for k in
+                             ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
+        out.append((t, model_name(r["message"]["model"]), total, output))
+    return out
+
+
+def _active(times: list[float], gap: float) -> float:
+    times = sorted(times)
+    return sum(b - a for a, b in zip(times, times[1:]) if b - a <= gap) / 3600
+
+
+def _change_named(text: str, name: str) -> bool:
+    # also the SDD workspace folder, plan-<change-id>/
+    return re.search(rf"(?:(?<![\w-])|(?<=plan-)){re.escape(name)}(?![\w-])", text) is not None
+
+
+def _bd_named(text: str, bd_id: str) -> bool:
+    return re.search(rf"(?<![\w-]){re.escape(bd_id)}(?![\w-]|\.\d)", text) is not None
+
+
+@dataclass
+class Row:
+    key: str
+    label: str
+    bd_id: str = ""
+    title: str = ""
+    hours: float = 0.0
+    models: dict[str, list[int]] = field(default_factory=dict)  # model -> [tokens, output]
+
+    def add(self, usage) -> None:
+        for _, model, tokens, output in usage:
+            entry = self.models.setdefault(model, [0, 0])
+            entry[0] += tokens
+            entry[1] += output
+
+
+def breakdown(change: str, aliases: list[str], logs: list[Path], gap_min: float) -> dict:
+    gap = gap_min * 60
+    measured = measure(change, aliases, logs, gap_min)
+    tasks = plan_tasks(change)
+    names = [change, *aliases]
+    rows = {t.number: Row(t.number, f"Task {t.number} [{t.bd_id}] {t.title}", t.bd_id, t.title) for t in tasks}
+    other, session = Row("other", "other (change subagents outside the tasks)"), Row("session", "session (controller)")
+    for directory in logs:
+        for main in sorted(directory.glob("*.jsonl")):
+            main_records = list(_records(main))
+            spans = measured.intervals.get(main, [])
+            session.add([u for u in _usage(main_records)
+                         if any(a < u[0] <= b for a, b in spans)])
+            for sub in sorted((main.parent / main.stem / "subagents").glob("*.jsonl")):
+                records = list(_records(sub))
+                first = next((_text(r) for r in records if r.get("type") == "user"), "")
+                by_id = next((t for t in tasks if _bd_named(first, t.bd_id)), None)
+                if by_id is None and not any(_change_named(first, n) for n in names):
+                    continue
+                if by_id is None:
+                    found = re.search(rf"plan-{re.escape(change)}/task-(\d+)-", first)
+                    by_id = next((t for t in tasks if found and t.number == found.group(1)), None)
+                row = rows[by_id.number] if by_id else other
+                usage = _usage(records)
+                row.add(usage)
+                row.hours += _active([t for t in (_timestamp(r) for r in records) if t is not None], gap)
+    ordered = [*rows.values(), other, session]
+    totals: dict[str, list[int]] = {}
+    for row in ordered:
+        for model, (tokens, output) in row.models.items():
+            entry = totals.setdefault(model, [0, 0])
+            entry[0] += tokens
+            entry[1] += output
+
+    def models(table: dict[str, list[int]]) -> list[dict]:
+        total = sum(v[0] for v in table.values())
+        return [{"model": m, "tokens": v[0], "output_tokens": v[1], "share": v[0] / total if total else 0.0}
+                for m, v in sorted(table.items(), key=lambda kv: -kv[1][0])]
+
+    return {
+        "change": change, "gap_minutes": gap_min,
+        "epic": {"hours": sum(measured.phases.values()), "task_hours": sum(r.hours for r in rows.values()),
+                 "tokens": sum(v[0] for v in totals.values()),
+                 "output_tokens": sum(v[1] for v in totals.values()), "models": models(totals)},
+        "rows": [{"key": r.key, "label": r.label, "bd_id": r.bd_id, "title": r.title, "hours": r.hours,
+                  "tokens": sum(v[0] for v in r.models.values()), "models": models(r.models)}
+                 for r in ordered if r.key in rows or r.models or r.hours],
+    }
+
+
+def print_breakdown(data: dict, as_json: bool) -> None:
+    if as_json:
+        print(json.dumps(data, indent=2))
+        return
+    def hours(value: float) -> str:
+        return f"{value:.1f}"
+    def lines(item: str, time: str, models: list[dict]):
+        if not models:
+            yield f"| {item} | {time} | | | | |"
+        for i, m in enumerate(models):
+            yield (f"| {item if i == 0 else ''} | {time if i == 0 else ''} | {m['model']} | {m['tokens']:,} | "
+                   f"{m['output_tokens']:,} | {m['share'] * 100:.0f}% |")
+    epic = data["epic"]
+    out = ["| Item | Time (h) | Model | Tokens | Output tokens | Share |", "|---|---|---|---|---|---|",
+           *lines(f"**{data['change']}** (epic)", f"{hours(epic['hours'])} total; tasks {hours(epic['task_hours'])}",
+                  epic["models"])]
+    for row in data["rows"]:
+        out.extend(lines(row["label"], hours(row["hours"]) if row["key"] != "session" else "", row["models"]))
+    print("\n".join(out))
 
 
 # ---------------------------------------------------------------- roadmap tables
@@ -447,6 +606,12 @@ def main(argv: list[str]) -> int:
     m.add_argument("--alias", action="append", default=[])
     m.add_argument("--logs", action="append", type=Path)
     m.add_argument("--json", action="store_true")
+    b = sub.add_parser("breakdown")
+    b.add_argument("change")
+    b.add_argument("--gap", type=float, default=10.0)
+    b.add_argument("--alias", action="append", default=[])
+    b.add_argument("--logs", action="append", type=Path)
+    b.add_argument("--json", action="store_true")
     r = sub.add_parser("record")
     r.add_argument("initiative")
     r.add_argument("change")
@@ -456,12 +621,15 @@ def main(argv: list[str]) -> int:
     p.add_argument("initiative")
     args = parser.parse_args(argv)
     try:
-        if args.cmd == "measure":
+        if args.cmd in ("measure", "breakdown"):
             logs = args.logs or default_logs()
             missing = [d for d in logs if not d.is_dir()]
             if missing:
                 raise Refusal(f"no Claude Code session logs in {missing[0]} (use --logs DIR)")
-            print_measure(args.change, measure(args.change, args.alias, logs, args.gap), args.gap, args.json)
+            if args.cmd == "breakdown":
+                print_breakdown(breakdown(args.change, args.alias, logs, args.gap), args.json)
+            else:
+                print_measure(args.change, measure(args.change, args.alias, logs, args.gap), args.gap, args.json)
         elif args.cmd == "record":
             phases: dict[str, float] = {}
             for name, hours in args.phase:
