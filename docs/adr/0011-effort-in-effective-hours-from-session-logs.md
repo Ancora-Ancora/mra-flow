@@ -11,7 +11,7 @@ ADR-0010 sized roadmap slices in person-days and took a slice's actual from the 
 
 ## Consequences
 
-- Roadmap columns are *Estimate (h)*, *Revised (h)*, *Actual (h)*; the default size scale is S 2–4, M 4–8, L 8–14, XL > 14 hours. `mra-effort` refuses a roadmap still in days: convert it by hand once.
+- Roadmap columns are *Estimate (h)*, *Revised (h)*, *Actual (h)*; the default size scale is S 2–4, M 4–8, L 8–14, XL > 14 hours. `mra-effort` refuses a roadmap still in days: `/mra-roadmap <project>` converts it (ADR-0012); before that, convert it by hand once.
 - The measure depends on the Claude Code log layout (`projects/<orchestrator path>/*.jsonl`, `<session>/subagents/*.jsonl`, `timestamp`, `<command-name>`/`<command-args>`); a change in that layout breaks `measure`, not the roadmap.
 - Work done under no command, or under a command that does not name the change (a grill topic, a hotfix id), is listed as unattributed for the user to assign, or counted with `--alias`.
 - Parallel sessions are summed, so overlapping work counts twice; in practice the overlap is small and the user can correct the figure.

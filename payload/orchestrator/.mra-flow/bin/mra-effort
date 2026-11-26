@@ -482,10 +482,16 @@ def record(initiative: str, change: str, phases: dict[str, float], actual: float
     by_phase = find_table(lines, "## Actuals by phase")
     new_row = [change, *(fmt(phases[p]) if phases.get(p) else "" for p in PHASES), fmt(total)]
     if by_phase is None:
-        at = next((i for i, l in enumerate(lines) if l == "## Total"), len(lines))
-        lines[at:at] = ["## Actuals by phase", "",
-                        "Effective hours per phase, written by `mra-effort record` at archive.", "",
-                        *render(header, [new_row]), ""]
+        section = ["Effective hours per phase, written by `mra-effort record` at archive.", "",
+                   *render(header, [new_row]), ""]
+        if "## Actuals by phase" in lines:  # the heading without a table yet: fill it
+            at = lines.index("## Actuals by phase") + 1
+            while at < len(lines) and not lines[at].strip():
+                at += 1
+            lines[at:at] = section
+        else:
+            at = next((i for i, l in enumerate(lines) if l == "## Total"), len(lines))
+            lines[at:at] = ["## Actuals by phase", "", *section]
     else:
         rows = [r for r in by_phase.rows if r[0] != change] + [new_row]
         order = [r[col["Change id"]] for r in table.rows]
@@ -521,7 +527,7 @@ def report(initiative: str) -> Path:
             if chosen:
                 forecast.append(chosen)
     totals = [
-        f"- Estimate: {_sum([e for e in estimates if e])} h",
+        f"- Estimate: {_sum([e for e in estimates if e]) if any(estimates) else '–'} h",
         f"- Forecast: {_sum(forecast)} h",
         f"- Progress: {done}/{len(live)} slices; actual {fmt(done_actual)} h vs. estimated "
         f"{_sum(done_estimates) if done_estimates else '–'} h",

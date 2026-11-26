@@ -166,7 +166,7 @@ class RoadmapTest(unittest.TestCase):
     def test_roadmap_skill_has_all_modes_and_is_user_invoked(self):
         text = self.skill("mra-roadmap")
         self.assertIn("disable-model-invocation: true", text)
-        for mode in ("--from <map-epic>", "--retro <initiative>", "**revise**"):
+        for mode in ("--from <map-epic>", "--retro [<project>]", "**revise**"):
             self.assertIn(mode, text)
 
     def test_slice_epics_are_found_by_slice_metadata_as_json(self):
@@ -203,7 +203,40 @@ class RoadmapTest(unittest.TestCase):
         for name in ("mra-propose", "mra-archive"):
             text = self.skill(name)
             self.assertIn("*A roadmap found missing late*", text, name)
-            self.assertIn("`/mra-roadmap --retro <initiative>` once", text, name)
+            self.assertIn("`/mra-roadmap --retro` once", text, name)
+            self.assertIn("`/mra-roadmap <project>`", text, name)
+
+    def test_one_initiative_per_project(self):
+        rule = ROADMAP.read_text(encoding="utf-8")
+        self.assertIn("\n## One initiative per project\n", rule)
+        self.assertIn('basename "$(git rev-parse --show-toplevel)"', rule)
+        self.assertIn("merged into initiative <project>", rule)
+        text = self.skill("mra-roadmap")
+        self.assertIn("*One initiative per project*", text)
+        self.assertIn("archived ones included", text)
+
+    def test_retro_builds_every_slice_with_estimates_and_actuals(self):
+        rule = ROADMAP.read_text(encoding="utf-8")
+        self.assertIn("\n## Retro estimates\n", rule)
+        self.assertIn("`retro`", rule)
+        self.assertIn("**without looking at its actual**", rule)
+        self.assertIn("\n## A roadmap in days\n", rule)
+        text = self.skill("mra-roadmap")
+        for source in ("archived changes", "in-flight changes", "every other `docs/roadmap/*.md`",
+                       "open epics in beads"):
+            self.assertIn(source, text)
+        self.assertIn("only which to **leave out**", text)
+        self.assertIn("the done slices too", text)
+
+    def test_retro_gathers_aliases_and_unnamed_commands(self):
+        rule = ROADMAP.read_text(encoding="utf-8")
+        self.assertIn("**aliases**", rule)
+        self.assertIn("**commands without a change id**", rule)
+        self.assertIn("`closed_at`", rule)
+
+    def test_actuals_heading_is_never_written_by_hand(self):
+        self.assertIn("never write the heading by hand", ROADMAP.read_text(encoding="utf-8"))
+        self.assertIn("Never write the `## Actuals by phase` heading by hand", self.skill("mra-roadmap"))
 
 
 MODEL_DISPLAY = PAYLOAD / "orchestrator" / ".mra-flow" / "docs" / "agents" / "model-display.md"

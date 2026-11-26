@@ -173,6 +173,22 @@ class MraEffortTest(TmpTestCase):
         self.assertEqual(text.count("| add-a |"), 2)  # one in Slices, one in Actuals by phase
         self.assertRegex(text, r"\| done \| bd-2 \| 7\.5 \|")
 
+    def test_record_fills_an_empty_actuals_section(self):
+        # A roadmap may carry the heading before the first actual: record must reuse it, not add another.
+        self.write_roadmap(ROADMAP.replace("## Total", "## Actuals by phase\n\n## Total"))
+        self.run_effort("record", "demo", "add-a", "--phase", "build=1")
+        done = self.run_effort("record", "demo", "add-b", "--phase", "fix=2")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        text = self.roadmap()
+        self.assertEqual(text.count("## Actuals by phase"), 1)
+        self.assertEqual(text.count("| Change id | grill |"), 1)
+        self.assertRegex(text, r"\| add-a \|.*\n\| add-b \|")
+
+    def test_report_without_estimates_says_so(self):
+        self.write_roadmap(re.sub(r"\| (5–8|2–4|8–12) \|", "|  |", ROADMAP))
+        self.run_effort("report", "demo")
+        self.assertIn("- Estimate: – h", self.roadmap())
+
     def test_report_variance_against_the_upper_bound(self):
         self.write_roadmap()
         self.run_effort("record", "demo", "add-a", "--phase", "build=10")   # 8 estimated: +2, +25%

@@ -102,28 +102,32 @@ class InstallTest(TmpTestCase):
         self.assertIn("warning: worktree in flight: .worktrees/foo", out)
         self.assertNotIn("in flight: archive", out)
 
-    def as_before_roadmap(self):
-        # The orchestrator as an older version left it: no mra-roadmap skill, not in the manifest.
-        shutil.rmtree(self.orch / ".claude/skills/mra-roadmap")
-        manifest = rc.load_manifest(self.orch)
-        del manifest.files[".claude/skills/mra-roadmap/SKILL.md"]
-        rc.save_manifest(self.orch, manifest)
-
-    def test_update_points_existing_changes_to_roadmap_retro_once(self):
+    def test_update_points_existing_changes_to_roadmap_retro_until_it_exists(self):
         self.ok()
         (self.orch / "openspec/changes/archive/2026-01-01-foo").mkdir(parents=True)
-        self.as_before_roadmap()
-        self.assertIn("/mra-roadmap --retro <initiative>", self.ok().stdout)
-        self.assertNotIn("--retro", self.ok().stdout)  # the skill is in the manifest now
-
-    def test_no_roadmap_note_without_changes_or_with_a_roadmap(self):
-        self.ok()
-        self.as_before_roadmap()
-        self.assertNotIn("--retro", self.ok().stdout)
-        (self.orch / "openspec/changes/foo").mkdir(parents=True)
+        self.assertIn("/mra-roadmap --retro", self.ok().stdout)
+        self.assertIn("/mra-roadmap --retro", self.ok().stdout)  # every update, until the roadmap exists
         (self.orch / "docs/roadmap").mkdir(parents=True)
-        self.as_before_roadmap()
+        self.assertIn("/mra-roadmap --retro", self.ok().stdout)  # an empty folder is no roadmap
+        (self.orch / f"docs/roadmap/{self.orch.name}.md").write_text("| Estimate (h) |\n")
+        self.assertNotIn("/mra-roadmap", self.ok().stdout)
+
+    def test_no_roadmap_note_without_changes(self):
+        self.ok()
         self.assertNotIn("--retro", self.ok().stdout)
+
+    def test_update_points_other_and_day_roadmaps_to_the_project_initiative(self):
+        self.ok()
+        roadmaps = self.orch / "docs/roadmap"
+        roadmaps.mkdir(parents=True)
+        (roadmaps / f"{self.orch.name}.md").write_text("| Estimate (h) |\n")
+        (roadmaps / f"{self.orch.name}-effort.md").write_text("generated\n")
+        self.assertNotIn("/mra-roadmap", self.ok().stdout)
+        (roadmaps / "go-live.md").write_text("| Estimate (h) |\n")
+        self.assertIn(f"docs/roadmap/go-live.md is not the project's one roadmap: merge it with `/mra-roadmap {self.orch.name}`", self.ok().stdout)
+        (roadmaps / "go-live.md").unlink()
+        (roadmaps / f"{self.orch.name}.md").write_text("| Estimate (d) |\n")
+        self.assertIn(f"is in days: convert it with `/mra-roadmap {self.orch.name}`", self.ok().stdout)
 
     def test_openspec_gate(self):
         before = snapshot(self.orch)

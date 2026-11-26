@@ -39,23 +39,17 @@ def active_change_warnings(root: Path) -> list[str]:
     return warnings
 
 
-ROADMAP_SKILL = ".claude/skills/mra-roadmap/SKILL.md"
+DRIFT_HOOK = ".mra-flow/hooks/check-drift.py"
 
 
-def roadmap_note(root: Path, manifest: rc.Manifest) -> str | None:
-    """Once, on the update that first installs /mra-roadmap (absent from the old manifest)
-    into an orchestrator that already has changes but no roadmap: point at --retro (ADR-0010)."""
-    if ROADMAP_SKILL in manifest.files or (root / "docs/roadmap").exists():
-        return None
-    changes = root / "openspec" / "changes"
-    archive = changes / "archive"
-    has_changes = changes.is_dir() and any(
-        p.is_dir() and p.name != "archive" for p in changes.iterdir())
-    has_changes |= archive.is_dir() and any(p.is_dir() for p in archive.iterdir())
-    if not has_changes:
-        return None
-    return ("new: /mra-roadmap cuts a large effort into estimated slices; to build a roadmap "
-            "from the existing changes run /mra-roadmap --retro <initiative>")
+def roadmap_notes(root: Path, payload: Path) -> list[str]:
+    """Every install and update: the same roadmap check as the SessionStart hook (ADR-0012),
+    changes without a roadmap -> --retro, another roadmap or one in days -> /mra-roadmap <project>."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("mra_check_drift", payload / DRIFT_HOOK)
+    hook = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hook)
+    return [long for _short, long in hook.roadmap_notices(root)]
 
 
 def _version(package: Path) -> str:
@@ -87,14 +81,13 @@ def install_orchestrator(root: Path, package: Path = PACKAGE_ROOT) -> int:
         return 1
     if manifest is not None:
         warnings += active_change_warnings(root)
-    roadmap = roadmap_note(root, manifest) if manifest is not None else None
+    roadmap = roadmap_notes(root, payload)
     if rc.load_manifest(claude_config_dir(), rc.USER_STATE) is None:
         warnings.append("personal conventions (handoff, language, memory) are not installed: "
                         "run install.sh --user")
 
     notes = env.ensure_openspec(root)
-    if roadmap:
-        notes.append(roadmap)
+    notes += roadmap
     env.check_openspec_skills(root)
     notes += env.ensure_beads(root)
 

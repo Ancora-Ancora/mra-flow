@@ -121,11 +121,11 @@ flowchart TB
     end
     subgraph RM["<b class='t'>/mra-roadmap</b>"]
         direction TB
-        rm["<b class='t'>/mra-roadmap</b><br/><span class='bmp'>mattpocock</span><span class='bcu'>custom</span>"]:::striped --> rm0["seed: new · revise · --from wayfinder map · --retro done/in-flight changes"]:::step
+        rm["<b class='t'>/mra-roadmap</b><br/><span class='bmp'>mattpocock</span><span class='bcu'>custom</span>"]:::striped --> rm0["one initiative per project · seed: new · revise (merge, days → hours) · --from wayfinder map · --retro every change, done and not"]:::step
         rm0 --> rm1["mattpocock-skills:grilling<br/>breadth-first"]:::mp
         rm0 --> rm2["mattpocock-skills:domain-modeling"]:::mp
         rm1 -. "cut or size depends on it" .-> rm5["recommend /mra-prototype · /mra-research"]:::step
-        rm1 & rm2 --> rm3["slices · sizes · hour ranges<br/>reference class: done slices' actuals"]:::step
+        rm1 & rm2 --> rm3["slices · sizes · hour ranges for all, retro ones for done<br/>reference class: done slices' actuals"]:::step
         rm3 --> rm4["bd create<br/>initiative epic + 1 epic per slice · bd dep add"]:::bd
         rm4 --> rmA["docs/roadmap/#lt;initiative#gt;.md<br/>slices · estimates · totals · ADRs · glossary"]:::art
     end
@@ -268,7 +268,7 @@ flowchart LR
     ss["SessionStart<br/>startup · clear · compact"]:::hook --> bp["bd prime<br/>beads rules + bd memories"]:::hook
     ss --> lh["load-handoff.py<br/>newest handoff only"]:::hook
     lh -- "if read: false → inject, mark read: true" --> hf
-    ss2["SessionStart<br/>startup · resume"]:::hook --> cd["check-drift.py<br/>no repos yet, or per repo: origin/HEAD sha vs. drift-state.json"]:::hook
+    ss2["SessionStart<br/>startup · resume"]:::hook --> cd["check-drift.py<br/>no repos yet, or per repo: origin/HEAD sha vs. drift-state.json<br/>roadmap: changes but none → --retro · other or in days → /mra-roadmap #lt;project#gt;"]:::hook
     cd -- "no repos registered → recommend, don't run" --> mr["mra-repo add"]
     cd -- "sha moved since last check → recommend, don't run" --> dr["<b class='t'>/mra-drift</b>"]
     ss2 --> cu["check-update.py<br/>newest vX.Y.Z tag on the remote (once per 24h) vs. .mra-flow/version"]:::hook

@@ -14,6 +14,11 @@ openspec/specs/ may be stale; the session is told to recommend /mra-drift,
 never to run it. A repo with `drift = false` in its table (out of scope for
 this orchestrator's changes) is never checked.
 
+It also keeps the project's one roadmap in shape (ADR-0012), every session
+until fixed: changes but no roadmap -> recommend `/mra-roadmap --retro`;
+another `docs/roadmap/*.md` -> merge it with `/mra-roadmap <project>`; the
+project's roadmap in person-days -> convert it the same way.
+
 Never fails the session: a missing mra-flow.toml, an unreachable remote or an
 unreadable state file all end the hook silently.
 """
@@ -81,20 +86,58 @@ def emit(system_message: str, context: str) -> None:
     )
 
 
+def roadmap_notices(root: pathlib.Path) -> list[tuple[str, str]]:
+    """What to recommend about the project's one roadmap, <root name>.md."""
+    project = root.name
+    folder = root / "docs" / "roadmap"
+    roadmaps = sorted(p for p in folder.glob("*.md") if not p.name.endswith("-effort.md")) \
+        if folder.is_dir() else []
+    if not roadmaps:
+        changes = root / "openspec" / "changes"
+        found = changes.is_dir() and any(p.is_dir() and p.name != "archive" for p in changes.iterdir())
+        archive = changes / "archive"
+        found |= archive.is_dir() and any(p.is_dir() for p in archive.iterdir())
+        return [("changes but no roadmap — run /mra-roadmap --retro",
+                 "the project has OpenSpec changes but no roadmap: recommend `/mra-roadmap --retro`, which "
+                 "builds its one initiative with every change as a slice, estimates and actual hours")] \
+            if found else []
+    notices = []
+    for path in roadmaps:
+        rel = path.relative_to(root).as_posix()
+        if path.stem != project:
+            notices.append((f"{rel}: merge it with /mra-roadmap {project}",
+                            f"{rel} is not the project's one roadmap: merge it with `/mra-roadmap {project}`"))
+        elif re.search(r"\|\s*Estimate \(d\)\s*\|", path.read_text(encoding="utf-8", errors="replace")):
+            notices.append((f"{rel} in days: convert it with /mra-roadmap {project}",
+                            f"{rel} is in days: convert it with `/mra-roadmap {project}`"))
+    return notices
+
+
 def main() -> int:
     root = pathlib.Path(os.environ.get("CLAUDE_PROJECT_DIR") or ".").resolve()
     if not (root / "mra-flow.toml").is_file():
         return 0
+    notices = [(short, "mra-flow SessionStart check-drift hook, roadmap check: " + long + ". Tell the user "
+                "this at the start of the conversation and recommend the command; do not run it yourself.")
+               for short, long in roadmap_notices(root)]
+    repo_notice = drift_notice(root)
+    if repo_notice:
+        notices.append(repo_notice)
+    if notices:
+        emit(" · ".join(n[0] for n in notices), "\n\n".join(n[1] for n in notices))
+    return 0
+
+
+def drift_notice(root: pathlib.Path) -> tuple[str, str] | None:
     repos = load_repos(root)
     if not repos:
-        emit(
+        return (
             "mra-flow.toml has no repos declared yet — run mra-repo add",
             "mra-flow.toml declares no [repos.*] yet (mra-flow SessionStart check-drift hook). "
             "Tell the user this at the start of the conversation and recommend "
             '`.mra-flow/bin/mra-repo add <key> <remote> --description "..."` for each code repo; '
             "do not run it yourself.",
         )
-        return 0
     state = load_state(root)
     changed = []
     for key, repo in sorted(repos.items()):
@@ -114,16 +157,15 @@ def main() -> int:
     save_state(root, state)
 
     if not changed:
-        return 0
+        return None
     repo_list = ", ".join(changed)
-    emit(
+    return (
         f"New commits on {repo_list} since the last check — consider /mra-drift",
         f"New commits landed on the default branch of: {repo_list} (mra-flow SessionStart "
         "check-drift hook). openspec/specs/ may now be stale for capabilities those repos own. "
         "Tell the user this at the start of the conversation and recommend running /mra-drift "
         "to check; do not run it yourself.",
     )
-    return 0
 
 
 if __name__ == "__main__":
