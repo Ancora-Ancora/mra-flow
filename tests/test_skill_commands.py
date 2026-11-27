@@ -135,7 +135,7 @@ class RoadmapTest(unittest.TestCase):
         for heading in ("## The file", "## Totals", "## Actuals", "## Beads", "## Who writes what"):
             self.assertIn(f"\n{heading}\n", text)
         # ADR-0011: effort in effective hours, never days.
-        for column in ("Estimate (h)", "Confidence", "Revised (h)", "Actual (h)"):
+        for column in ("Estimate (h)", "Confidence", "Revised (h)", "Start (UTC)", "End (UTC)", "Actual (h)"):
             self.assertIn(column, text)
         self.assertNotIn("(d)", text)
         for line in ("`Estimate: <min>–<max> h`", "`Forecast: <min>–<max> h`", "`Progress: "):

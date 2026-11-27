@@ -13,7 +13,7 @@ Turn `openspec/changes/<change-id>/tasks.md` into a beads epic with one child is
 
 1. Preconditions: `openspec validate <change-id> --strict` passes. Stop and report if not.
 2. **Idempotency.** `bd list -t epic -l openspec:<change-id> --all --json`. If an epic exists, list its children (`bd children <epic> --json`) and only create what is missing, matching tasks to children by their `task` metadata (`X.Y`), never by title; never duplicate. A child with metadata `dropped` was removed by `/mra-update`: never recreate it.
-3. Create the epic. If the change id is a slice of a roadmap (`.mra-flow/docs/agents/roadmap.md`, *Finding the slice of a change*) and its slice epic exists, promote it instead, as *Promotion* in that file says, then set the row's Status to `in progress` and its Epic. Otherwise:
+3. Create the epic. If the change id is a slice of a roadmap (`.mra-flow/docs/agents/roadmap.md`, *Finding the slice of a change*) and its slice epic exists, promote it instead, as *Promotion* in that file says, then set the row's Status to `in progress` and its Epic, and its start: `.mra-flow/bin/mra-effort record <initiative> <change-id> --start "<start>"`, with `<start>` from `.mra-flow/bin/mra-effort measure <change-id> --json` (its grill, usually; plus `--alias <grill topic>` when the grill did not name the change). Otherwise:
    ```bash
    bd create "<change-id>: <proposal title>" -t epic -l openspec:<change-id> \
      --spec-id openspec/changes/<change-id> -d "<proposal Why, 1-3 lines>" --silent

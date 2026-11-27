@@ -73,9 +73,9 @@ created: <YYYY-MM-DD>
 
 ## Slices
 
-| # | Change id | Goal | Repos | Contract | Depends on | UI preview | Size | Estimate (h) | Confidence | Revised (h) | Status | Epic | Actual (h) |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | add-foo | <one line> | hub | yes | – | prototype docs/prototypes/foo-screen.md | M | 5–8 | medium | | planned | bd-12 | |
+| # | Change id | Goal | Repos | Contract | Depends on | UI preview | Size | Estimate (h) | Confidence | Revised (h) | Status | Epic | Start (UTC) | End (UTC) | Actual (h) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | add-foo | <one line> | hub | yes | – | prototype docs/prototypes/foo-screen.md | M | 5–8 | medium | | planned | bd-12 | | | |
 
 <!-- "## Actuals by phase": written by `mra-effort record` (see Actuals below); never write the heading by hand -->
 
@@ -112,17 +112,19 @@ Column rules:
 - **Confidence**: `high` (similar done slices exist, no open points), `medium`, `low` (open points or unknown technology; widen the range), or `retro`: a done slice estimated after the work by `--retro` (see *Retro estimates*).
 - **Revised (h)**: the range after `/mra-propose`, from `tasks.md`. Empty until then.
 - **Status**: `planned` → `proposed` (`/mra-propose`) → `in progress` (`/mra-track`) → `done` (`/mra-archive`); or `dropped` (by `/mra-roadmap` only, with a log line).
+- **Start (UTC)**, **End (UTC)**: the first and the last minute of work on the slice, `YYYY-MM-DD HH:MM` (typically in its `/mra-grill` and its `/mra-archive`), from `mra-effort measure` (`start`, `end`): Start written by `/mra-track`, both by `/mra-archive` and `--retro`, always through `mra-effort record --start/--end`. A roadmap without these columns gets them from the first `record` that sets a date.
 - **Actual (h)**: effective hours spent, written by `mra-effort record` in `/mra-archive` (see Actuals).
 
 ## Totals
 
-The **Total** section holds three lines. Never compute them by hand: whoever changes a size, estimate, status or actual runs `.mra-flow/bin/mra-effort report <initiative>`, which rewrites them and regenerates `<initiative>-effort.md`:
+The **Total** section holds three lines, four once a slice has a date. Never compute them by hand: whoever changes a size, estimate, status or actual runs `.mra-flow/bin/mra-effort report <initiative>`, which rewrites them and regenerates `<initiative>-effort.md`:
 
 - `Estimate: <min>–<max> h` — the sum of the original estimates of all slices not dropped.
 - `Forecast: <min>–<max> h` — the sum, over slices not dropped, of the actual for done slices, else the revised range, else the original one.
 - `Progress: <done>/<total> slices; actual <sum of actuals> h vs. estimated <sum of the original ranges of the done slices> h`.
+- `Period: <start> → <end> (UTC)` — when the project's work began and ended: the earliest *Start* of its slices to the latest *End*, `in progress` until every slice not dropped is done; absent while no slice has a date. The effort file repeats it under its title.
 
-The effort file holds one table, **Variance by slice**: per slice not dropped, its epic, change id, goal, estimate range (*Estimate (h)*), estimated hours (its upper bound), actual hours, variance (actual − estimated) in hours and in percent of the estimate, and 🔴 when over the estimate, 🟢 when within it, ⚪ when not done; then one column per phase used (`mra-grill`, `mra-prototype`, `mra-propose`, … `mra-hotfix`), with the actual hours of that phase from *Actuals by phase*. A **Total** row sums the done slices; its variance covers the slices that have both an estimate and an actual.
+The effort file holds one table, **Variance by slice**: per slice not dropped, its epic, change id, goal, start and end, estimate range (*Estimate (h)*), estimated hours (its upper bound), actual hours, variance (actual − estimated) in hours and in percent of the estimate, and 🔴 when over the estimate, 🟢 when within it, ⚪ when not done; then one column per phase used (`mra-grill`, `mra-prototype`, `mra-propose`, … `mra-hotfix`), with the actual hours of that phase from *Actuals by phase*. A **Total** row sums the done slices; its variance covers the slices that have both an estimate and an actual.
 
 ## Actuals
 
@@ -131,7 +133,8 @@ The actual is **effective hours**: the time the agent or the user was active on 
 - an interval between two timestamped events of a session counts when it is at most 10 minutes long (`--gap`); longer pauses (nights, a suspended laptop, waiting on the user) are left out;
 - it goes to the phase of the `/mra-*` command in progress in that session (`mra-grill` → grill, `mra-verify` and `mra-qa-ui` → verify, …) when the command's arguments name the change id, or an `--alias` (a grill topic, a hotfix's bd id);
 - stretches in the change's period (from a day before its first attributed minute to its last) that no command attributes, or whose command names no known change, are listed with session, time, duration and the last prompt, to be assigned to a phase or ignored;
-- parallel sessions are summed, not merged.
+- parallel sessions are summed, not merged;
+- `start` and `end` (JSON; `from … to … UTC` in the text) are the first and last attributed minute: the slice's *Start* and *End*.
 
 In `--retro`, collect the aliases and the stretches from the logs before asking, so the user confirms one figure per change instead of rebuilding it:
 

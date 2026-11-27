@@ -10,7 +10,7 @@
       hours and tokens per model, then every plan task with its subagents' hours and
       tokens per model, then `other` (change subagents matching no task) and `session`
       (the controller's own work)
-  mra-effort record <initiative> <change-id> --phase PHASE=HOURS ... [--actual HOURS]
+  mra-effort record <initiative> <change-id> --phase PHASE=HOURS ... [--actual HOURS] [--start T] [--end T]
       write the confirmed hours into docs/roadmap/<initiative>.md (Actual (h) and
       the "Actuals by phase" table)
   mra-effort report <initiative>
@@ -159,6 +159,8 @@ class Measure:
     unattributed: list[Stretch] = field(default_factory=list)
     sessions: int = 0
     intervals: dict[Path, list[tuple[float, float]]] = field(default_factory=dict)
+    start: float | None = None   # first and last attributed minute: the change's period
+    end: float | None = None
 
 
 def measure(change: str, aliases: list[str], logs: list[Path], gap_min: float) -> Measure:
@@ -204,6 +206,7 @@ def measure(change: str, aliases: list[str], logs: list[Path], gap_min: float) -
                 previous = event.t
             result.sessions += 1
     if period:
+        result.start, result.end = min(period), max(period)
         first, last = min(period) - 24 * 3600, max(period)
         result.unattributed = sorted((r for r in runs
                                       if r.hours >= MIN_STRETCH_H and r.end > first and r.start < last),
@@ -220,6 +223,8 @@ def print_measure(change: str, result: Measure, gap: float, as_json: bool) -> No
     if as_json:
         print(json.dumps({
             "change": change, "gap_minutes": gap, "hours": round(total, 2),
+            "start": _clock(result.start) if result.start else None,
+            "end": _clock(result.end) if result.end else None,
             "phases": {p: round(h, 2) for p, h in sorted(result.phases.items(), key=lambda x: PHASES.index(x[0]))},
             "unattributed": [{"session": s.session, "start": _clock(s.start), "end": _clock(s.end),
                               "hours": round(s.hours, 2), "context": s.context, "prompt": s.prompt}
@@ -227,6 +232,8 @@ def print_measure(change: str, result: Measure, gap: float, as_json: bool) -> No
         }, indent=2))
         return
     print(f"{change}: {fmt(total)} h attributed (gap {fmt(gap)} min, {result.sessions} sessions)")
+    if result.start:
+        print(f"  from {_clock(result.start)} to {_clock(result.end)} UTC")
     for phase in PHASES:
         if result.phases.get(phase):
             hours = result.phases[phase]
@@ -467,13 +474,39 @@ def slices(lines: list[str]) -> tuple[Table, dict[str, int]]:
     return table, col
 
 
-def record(initiative: str, change: str, phases: dict[str, float], actual: float | None) -> None:
+DATES = ("Start (UTC)", "End (UTC)")
+
+
+def with_date_columns(table: Table, col: dict[str, int]) -> dict[str, int]:
+    """Add Start/End before Actual (h) to a roadmap written before 0.1.36, padding every row."""
+    for name in DATES:
+        if name not in col:
+            at = table.header.index("Actual (h)")
+            table.header.insert(at, name)
+            for r in table.rows:
+                r.insert(at, "")
+            col = {h: i for i, h in enumerate(table.header)}
+    return col
+
+
+def record(initiative: str, change: str, phases: dict[str, float], actual: float | None,
+           start: str | None = None, end: str | None = None) -> None:
     path = roadmap_path(initiative)
     lines = path.read_text(encoding="utf-8").splitlines()
     table, col = slices(lines)
     row = next((r for r in table.rows if r[col["Change id"]] == change), None)
     if row is None:
         raise Refusal(f"{change} is not a slice of {initiative}")
+    if start or end:
+        col = with_date_columns(table, col)
+        if start:
+            row[col["Start (UTC)"]] = start
+        if end:
+            row[col["End (UTC)"]] = end
+    if not phases and actual is None:  # dates only: an in-progress slice
+        lines[table.start:table.end] = render(table.header, table.rows)
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return
     total = actual if actual is not None else sum(phases.values())
     row[col["Actual (h)"]] = fmt(total)
     lines[table.start:table.end] = render(table.header, table.rows)
@@ -532,6 +565,15 @@ def report(initiative: str) -> Path:
         f"- Progress: {done}/{len(live)} slices; actual {fmt(done_actual)} h vs. estimated "
         f"{_sum(done_estimates) if done_estimates else '–'} h",
     ]
+    # The initiative's period: its first slice's start to its last slice's end, once all are done.
+    starts = [r[col["Start (UTC)"]] for r in live if "Start (UTC)" in col and r[col["Start (UTC)"]]]
+    ends = [r[col["End (UTC)"]] for r in live if "End (UTC)" in col and r[col["End (UTC)"]]]
+    period = None
+    if starts or ends:
+        finished = all(r[col["Status"]] == "done" for r in live)
+        period = (f"Period: {min(starts) if starts else '–'} → "
+                  f"{max(ends) if finished and ends else 'in progress'} (UTC)")
+        totals.append(f"- {period}")
     at = next((i for i, l in enumerate(lines) if l == "## Total"), None)
     if at is not None:
         end = next((i for i in range(at + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
@@ -554,7 +596,7 @@ def report(initiative: str) -> Path:
         actual = parse_hours(r[col["Actual (h)"]]) if r[col["Status"]] == "done" else None
         upper = est[1] if est else None
         cells = [r[col.get("#", 0)] if "#" in col else "", r[col["Epic"]], r[col["Change id"]],
-                 r[col["Goal"]], r[col["Estimate (h)"]] or "–", fmt(upper) if upper is not None else "–",
+                 r[col["Goal"]], *(r[col[d]] if d in col else "" for d in DATES), r[col["Estimate (h)"]] or "–", fmt(upper) if upper is not None else "–",
                  fmt(actual) if actual is not None else "–"]
         if actual is not None and upper:
             diff = actual - upper
@@ -569,8 +611,8 @@ def report(initiative: str) -> Path:
         variance_rows.append(cells)
     if sum_est or any(sum_phase.values()):
         diff = sum_act - sum_est
-        total = ["", "", "**Total**", "done slices", "", fmt(sum_est) if sum_est else "",
-                 fmt(sum(parse_hours(r[6]) or 0 for r in variance_rows))]
+        total = ["", "", "**Total**", "done slices", "", "", "", fmt(sum_est) if sum_est else "",
+                 fmt(sum(parse_hours(r[8]) or 0 for r in variance_rows))]
         total += ([f"{diff:+.1f}", f"{diff / sum_est * 100:+.0f}%", "🔴" if diff > 0 else "🟢"]
                   if sum_est else ["", "", ""])
         total += [fmt(sum_phase[p]) for p in used]
@@ -578,11 +620,12 @@ def report(initiative: str) -> Path:
 
     out = [f"<!-- generated by .mra-flow/bin/mra-effort report {initiative}; do not edit -->",
            f"# {title}: estimate vs. actual", "",
+           *([period, ""] if period else []),
            "Hours are effective hours. Estimate range = the original estimate; estimated = its upper bound; "
            "variance = actual − estimated, totalled over the slices that have both. 🔴 over the estimate, "
            "🟢 within it, ⚪ not done yet. The mra-* columns are the actual hours of each phase.", "",
            "## Variance by slice", "",
-           *render(["#", "Epic", "Change id", "Summary", "Estimate range (h)", "Estimated (h)", "Actual (h)",
+           *render(["#", "Epic", "Change id", "Summary", *DATES, "Estimate range (h)", "Estimated (h)", "Actual (h)",
                     "Variance (h)", "Variance (%)", "", *(f"mra-{p}" if p != "other" else "other" for p in used)],
                    variance_rows), ""]
     target = ROADMAPS / f"{initiative}-effort.md"
@@ -600,6 +643,13 @@ def _phase_arg(value: str) -> tuple[str, float]:
         return name, float(hours.replace(",", "."))
     except ValueError:
         raise argparse.ArgumentTypeError(f"{value!r} is not PHASE=HOURS") from None
+
+
+def _when(value: str) -> str:
+    try:
+        return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M").strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not 'YYYY-MM-DD HH:MM'") from None
 
 
 def main(argv: list[str]) -> int:
@@ -623,6 +673,8 @@ def main(argv: list[str]) -> int:
     r.add_argument("change")
     r.add_argument("--phase", action="append", type=_phase_arg, default=[])
     r.add_argument("--actual", type=float)
+    r.add_argument("--start", type=_when, help="first minute of work, 'YYYY-MM-DD HH:MM' UTC (measure's start)")
+    r.add_argument("--end", type=_when, help="last minute of work, 'YYYY-MM-DD HH:MM' UTC (measure's end)")
     p = sub.add_parser("report")
     p.add_argument("initiative")
     args = parser.parse_args(argv)
@@ -640,9 +692,9 @@ def main(argv: list[str]) -> int:
             phases: dict[str, float] = {}
             for name, hours in args.phase:
                 phases[name] = phases.get(name, 0.0) + hours
-            if not phases and args.actual is None:
-                raise Refusal("give --phase PHASE=HOURS (one or more) or --actual HOURS")
-            record(args.initiative, args.change, phases, args.actual)
+            if not phases and args.actual is None and not (args.start or args.end):
+                raise Refusal("give --phase PHASE=HOURS (one or more), --actual HOURS, or --start/--end")
+            record(args.initiative, args.change, phases, args.actual, args.start, args.end)
             print(f"recorded {args.change} in docs/roadmap/{args.initiative}.md")
         else:
             print(f"wrote {report(args.initiative).relative_to(ROOT)}")

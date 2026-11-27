@@ -101,6 +101,16 @@ class MraEffortTest(TmpTestCase):
         self.assertAlmostEqual(result["phases"]["verify"], 9 / 60, places=2)
         self.assertAlmostEqual(result["hours"], 29 / 60, places=1)
 
+    def test_start_and_end_of_the_attributed_work(self):
+        self.session("s1", [command(0, "mra-grill", "add-a"), tick(5),
+                            command(30, "mra-grill", "other topic"), tick(35)])   # not the change's
+        self.session("s2", [command(120, "mra-archive", "add-a"), tick(127)])
+        result = self.measure()
+        self.assertEqual(result["start"], "2026-11-20 09:00")
+        self.assertEqual(result["end"], "2026-11-20 11:07")
+        text = self.run_effort("measure", "add-a", "--logs", str(self.logs)).stdout
+        self.assertIn("from 2026-11-20 09:00 to 2026-11-20 11:07 UTC", text)
+
     def test_subagent_activity_fills_the_gaps_of_the_main_session(self):
         self.session("s1", [command(0, "mra-build", "add-a"), tick(30)],
                      subagent=[tick(8), tick(16), tick(24)])
@@ -189,6 +199,57 @@ class MraEffortTest(TmpTestCase):
         self.run_effort("report", "demo")
         self.assertIn("- Estimate: – h", self.roadmap())
 
+    def test_record_writes_start_and_end(self):
+        self.write_roadmap()
+        done = self.run_effort("record", "demo", "add-a", "--phase", "build=2",
+                               "--start", "2026-11-20 09:00", "--end", "2026-11-21 17:30")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        text = self.roadmap()
+        # columns added before Actual (h), every row padded
+        self.assertIn("| Epic | Start (UTC) | End (UTC) | Actual (h) |", text)
+        self.assertRegex(text, r"\| done \| bd-2 \| 2026-11-20 09:00 \| 2026-11-21 17:30 \| 2 \|")
+        self.assertRegex(text, r"\| planned \| bd-4 \|  \|  \|  \|")
+        # an in-progress slice gets its start alone; its actual stays empty
+        done = self.run_effort("record", "demo", "add-c", "--start", "2026-11-22 08:15")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertRegex(self.roadmap(), r"\| planned \| bd-4 \| 2026-11-22 08:15 \|  \|  \|")
+        self.assertNotIn("| add-c |", self.roadmap().split("## Actuals by phase")[1])
+        # a malformed date is refused
+        bad = self.run_effort("record", "demo", "add-a", "--start", "yesterday")
+        self.assertEqual(bad.returncode, 2)
+
+    def test_report_shows_start_and_end(self):
+        self.write_roadmap()
+        self.run_effort("record", "demo", "add-a", "--phase", "build=10",
+                        "--start", "2026-11-20 09:00", "--end", "2026-11-21 17:30")
+        self.run_effort("report", "demo")
+        report = (self.orch / "docs/roadmap/demo-effort.md").read_text()
+        self.assertIn("| Summary | Start (UTC) | End (UTC) | Estimate range (h) |", report)
+        self.assertIn("| add-a | First slice | 2026-11-20 09:00 | 2026-11-21 17:30 | 5–8 |", report)
+        self.assertIn("| add-c | Third slice |  |  | 8–12 |", report)
+
+    def test_report_gives_the_initiative_period(self):
+        self.write_roadmap()
+        self.run_effort("record", "demo", "add-a", "--phase", "build=1",
+                        "--start", "2026-11-20 09:00", "--end", "2026-11-21 17:30")
+        self.run_effort("record", "demo", "add-b", "--phase", "fix=1",
+                        "--start", "2026-11-19 14:00", "--end", "2026-11-23 10:00")
+        self.run_effort("report", "demo")
+        effort = (self.orch / "docs/roadmap/demo-effort.md").read_text()
+        # add-c is still planned: started, not finished
+        self.assertIn("- Period: 2026-11-19 14:00 → in progress (UTC)", self.roadmap())
+        self.assertIn("Period: 2026-11-19 14:00 → in progress (UTC)", effort)
+        text = self.roadmap().replace("| planned | bd-4 |", "| done | bd-4 |")
+        (self.orch / "docs/roadmap/demo.md").write_text(text)
+        self.run_effort("record", "demo", "add-c", "--phase", "build=1", "--end", "2026-11-25 18:00")
+        self.run_effort("report", "demo")
+        self.assertIn("- Period: 2026-11-19 14:00 → 2026-11-25 18:00 (UTC)", self.roadmap())
+
+    def test_no_dates_no_period_line(self):
+        self.write_roadmap()
+        self.run_effort("report", "demo")
+        self.assertNotIn("Period:", self.roadmap())
+
     def test_report_variance_against_the_upper_bound(self):
         self.write_roadmap()
         self.run_effort("record", "demo", "add-a", "--phase", "build=10")   # 8 estimated: +2, +25%
@@ -197,11 +258,11 @@ class MraEffortTest(TmpTestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         report = (self.orch / "docs/roadmap/demo-effort.md").read_text()
         self.assertIn("do not edit", report)
-        self.assertIn("| 1 | bd-2 | add-a | First slice | 5–8 | 8 | 10 | +2.0 | +25% | 🔴 | 10 |  |", report)
-        self.assertIn("| 2 | bd-3 | add-b | Second slice | 2–4 | 4 | 3 | -1.0 | -25% | 🟢 |  | 3 |", report)
-        self.assertIn("| 3 | bd-4 | add-c | Third slice | 8–12 | 12 | – |  |  | ⚪ |  |  |", report)
+        self.assertIn("| 1 | bd-2 | add-a | First slice |  |  | 5–8 | 8 | 10 | +2.0 | +25% | 🔴 | 10 |  |", report)
+        self.assertIn("| 2 | bd-3 | add-b | Second slice |  |  | 2–4 | 4 | 3 | -1.0 | -25% | 🟢 |  | 3 |", report)
+        self.assertIn("| 3 | bd-4 | add-c | Third slice |  |  | 8–12 | 12 | – |  |  | ⚪ |  |  |", report)
         self.assertNotIn("add-d", report)
-        self.assertIn("| **Total** | done slices |  | 12 | 13 | +1.0 | +8% | 🔴 | 10 | 3 |", report)
+        self.assertIn("| **Total** | done slices |  |  |  | 12 | 13 | +1.0 | +8% | 🔴 | 10 | 3 |", report)
         # one column per phase used, named after its command, in workflow order
         self.assertIn("| Variance (h) | Variance (%) |  | mra-build | mra-fix |", report)
         self.assertNotIn("mra-grill", report)
