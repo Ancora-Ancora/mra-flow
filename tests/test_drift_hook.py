@@ -65,18 +65,57 @@ class DriftHookTest(TmpTestCase):
         done = self.run_hook()
         self.assertEqual(done.stdout, "")
 
-    def test_new_commit_is_reported_once(self):
+    def repo(self):
         self.toml('[repos.be]\npath = "be"\nremote = "x"\ndescription = "d"\n')
+
+    def run_cli(self, *args) -> subprocess.CompletedProcess:
+        env = dict(self.env, CLAUDE_PROJECT_DIR=str(self.orch))
+        return subprocess.run([sys.executable, str(HOOK), *args], cwd=self.orch, env=env,
+                              capture_output=True, text=True)
+
+    def test_new_commit_asks_now_later_or_ignore(self):
+        self.repo()
         self.run_hook()
         self.push_new_commit()
 
-        done = self.run_hook()
-        payload = json.loads(done.stdout)
+        payload = json.loads(self.run_hook().stdout)
         self.assertIn("be", payload["systemMessage"])
-        self.assertIn("mra-drift", payload["hookSpecificOutput"]["additionalContext"])
+        context = payload["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("AskUserQuestion", context)
+        self.assertIn("`.claude/skills/mra-drift/SKILL.md`", context)
+        self.assertIn("python3 .mra-flow/hooks/check-drift.py ack be", context)
 
-        quiet = self.run_hook()
-        self.assertEqual(quiet.stdout, "")
+    def test_new_commit_repeats_until_acknowledged(self):
+        self.repo()
+        self.run_hook()
+        self.push_new_commit()
+        self.run_hook()
+        self.assertIn("mra-drift", self.run_hook().stdout)  # "Later": asked again
+
+        done = self.run_cli("ack", "be")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn("acknowledged: be", done.stdout)
+        self.assertEqual(self.run_hook().stdout, "")
+
+        self.push_new_commit()
+        self.assertIn("mra-drift", self.run_hook().stdout)
+
+    def test_ack_without_keys_acknowledges_every_repo(self):
+        self.repo()
+        self.run_hook()
+        self.push_new_commit()
+        self.assertEqual(self.run_cli("ack").returncode, 0)
+        self.assertEqual(self.run_hook().stdout, "")
+
+    def test_ack_rejects_an_unknown_repo(self):
+        self.repo()
+        done = self.run_cli("ack", "nope")
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("unknown repo: nope", done.stderr)
+
+    def test_ack_reports_a_missing_clone(self):
+        self.toml('[repos.fe]\npath = "fe"\nremote = "x"\ndescription = "d"\n')
+        self.assertEqual(self.run_cli("ack", "fe").returncode, 2)
 
     def test_repo_with_drift_false_is_never_reported(self):
         self.toml('[repos.be]\npath = "be"\nremote = "x"\ndescription = "d"\ndrift = false\n')

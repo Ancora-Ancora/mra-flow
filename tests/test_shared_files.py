@@ -56,6 +56,10 @@ class SettingsTest(TmpTestCase):
         self.merge()
         self.assertEqual(self.load()["hooks"]["SessionStart"], [self.hook])
 
+    def test_orchestrator_checks_run_on_startup_and_clear(self):
+        for entry in (sf.drift_hook_entry(self.tmp), sf.update_hook_entry(self.tmp)):
+            self.assertEqual(entry["matcher"], "startup|clear")
+
     def test_two_different_hooks_coexist(self):
         drift = sf.drift_hook_entry(self.tmp)
         self.merge()

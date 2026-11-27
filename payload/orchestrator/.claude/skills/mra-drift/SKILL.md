@@ -7,11 +7,11 @@ argument-hint: [capability] [--since <date|commit>] [--exclude-change <change-id
 
 # mra-drift — check specs against the real code
 
-Check whether `openspec/specs/` still describes the real behaviour of the code in `$ARGUMENTS`. Read-only: never edit, create or commit any file, and never touch beads.
+Check whether `openspec/specs/` still describes the real behaviour of the code in `$ARGUMENTS`. Read-only: never edit, create or commit any file, and never touch beads; the one exception is step 11, which records the check in the SessionStart hook's state file.
 
 ## Steps
 
-1. List the capabilities in `openspec/specs/` (only the given one, if provided). None → say so, stop.
+1. List the capabilities in `openspec/specs/` (only the given one, if provided). None → say so, do step 11, stop.
 2. For each capability, find the repos that own it:
    - Locate the most recent archived change that touched it: `openspec/changes/archive/YYYY-MM-DD-*/specs/<capability>/`.
    - Read that change's `tasks.md` for its `[<key>]` tags (or `design.md` Impact) to get the owning repo keys; resolve paths with `.mra-flow/bin/mra-repo list`.
@@ -33,9 +33,10 @@ Check whether `openspec/specs/` still describes the real behaviour of the code i
     - DRIFT-CODE → a beads bug: `/mra-fix <change-id>` if the capability's change still has an open epic, else `/mra-hotfix`.
     - UNSPECIFIED in an area about to change → include it as an ADDED requirement in the next `/mra-propose`.
     Ask the user before starting any of them.
+11. Only when run without a capability argument (every capability checked, or none exists): acknowledge the commits the SessionStart drift check reported, `python3 .mra-flow/hooks/check-drift.py ack`, so it stops asking about them. With a capability argument, skip this: the other capabilities are unchecked.
 
 ## Rules
 
 - Show the model at work: `Model: <model> (<role>)` at the phase start, with every subagent dispatch and whenever it changes; see `.mra-flow/docs/agents/model-display.md`.
-- Read-only: never edit, create or commit any file, and never create or update a beads issue.
+- Read-only: never edit, create or commit any file, and never create or update a beads issue; only step 11 writes, to `.mra-flow/drift-state.json` (local, git-ignored), through `check-drift.py ack`.
 - Report in the user's language; any artifact created afterwards is written in English.

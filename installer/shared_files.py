@@ -35,10 +35,15 @@ def hook_entry(claude_dir: Path) -> dict:
     }
 
 
+# The orchestrator checks run on a new session and on /clear, not on resume: a
+# resumed conversation already got (and answered) their question.
+CHECK_HOOK_MATCHER = "startup|clear"
+
+
 def drift_hook_entry(root: Path) -> dict:
     command = f'python3 "{root / DRIFT_HOOK_SCRIPT}"'
     return {
-        "matcher": "startup|resume",
+        "matcher": CHECK_HOOK_MATCHER,
         "hooks": [{"type": "command", "command": command, "timeout": 15}],
     }
 
@@ -46,7 +51,7 @@ def drift_hook_entry(root: Path) -> dict:
 def update_hook_entry(root: Path) -> dict:
     command = f'python3 "{root / UPDATE_HOOK_SCRIPT}"'
     return {
-        "matcher": "startup|resume",
+        "matcher": CHECK_HOOK_MATCHER,
         "hooks": [{"type": "command", "command": command, "timeout": 15}],
     }
 

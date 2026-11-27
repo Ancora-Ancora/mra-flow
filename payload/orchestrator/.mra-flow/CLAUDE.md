@@ -42,6 +42,8 @@ Every feature goes through the `mra-flow` workflow (diagram: `.mra-flow/docs/mra
 | any time | `/mra-drift [capability]` | drift report: specs vs. real code, read-only |
 | when stuck on a fact | `/mra-research <question> [--change <id>]` | cited note in `docs/research/` |
 | when stuck on design, or a new UI screen | `/mra-prototype <question>` | note in `docs/prototypes/`, verdict as ADR or carried decision; prototype kept on branch `prototype/<slug>` |
+| any time | `/mra-flow-version-check` | installed vs. newest mra-flow release and what it changes, read-only |
+| any time | `/mra-flow-update [X.Y.Z] [--user]` | mra-flow updated after confirmation, commit proposed |
 | end of session | `/mattpocock-skills:handoff [next focus]` | `handoff/ho-<datetime>.md` (`read: false`), auto-loaded once by the next session (handoff rules: installed with `install.sh --user`) |
 
 Rules:
@@ -59,8 +61,8 @@ Rules:
 
 - Before `/mra-grill` or `/mra-propose` on a capability that already has a spec, run `/mra-drift <capability>` and resolve DRIFT-SPEC items first (both skills ask this on your behalf; you can also run it yourself first).
 - After `/mra-hotfix`, or any manual change that alters specified behaviour, run `/mra-drift <capability>` and sync the spec.
-- A SessionStart hook (`.mra-flow/hooks/check-drift.py`) checks the code repos' default branches on every new session and recommends `/mra-drift` when one moved since the last check; it only recommends, never runs it. Its state file, `.mra-flow/drift-state.json`, is local and git-ignored.
-- A second SessionStart hook (`.mra-flow/hooks/check-update.py`) asks the mra-flow remote at most once every 24 hours for its newest release tag and, while it is newer than `.mra-flow/version`, tells the session to recommend the update command (never to run it). Its state file, `.mra-flow/update-state.json`, is local and git-ignored; `MRA_FLOW_REMOTE` overrides the remote.
+- A SessionStart hook (`.mra-flow/hooks/check-drift.py`, on a new session and on `/clear`) checks the code repos' default branches. When one moved past the commit last acknowledged, the session asks the user: check now (`/mra-drift`), later (asked again next time) or ignore (`check-drift.py ack <key>`). `/mra-drift` without a capability acknowledges them at its end. Its state file, `.mra-flow/drift-state.json`, is local and git-ignored.
+- A second SessionStart hook (`.mra-flow/hooks/check-update.py`, same events) asks the mra-flow remote at most once every 4 hours for its newest release tag. While it is newer than `.mra-flow/version`, the session asks the user: update now (`/mra-flow-update`), later, or ignore that release (`check-update.py ignore X.Y.Z`). `/mra-flow-version-check` asks the remote at once. Its state file, `.mra-flow/update-state.json`, is local and git-ignored; `MRA_FLOW_REMOTE` overrides the remote.
 
 ### How this overrides the beads defaults
 

@@ -286,3 +286,27 @@ class EffortBreakdownSkillTest(unittest.TestCase):
         text = (SKILLS / "mra-build" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name the bd id in every dispatch prompt", text)
         self.assertIn("mra-effort breakdown", text)
+
+
+class SessionStartChecksTest(unittest.TestCase):
+    """The hooks' "now" answers follow these skills' files: keep the names and commands in step."""
+
+    def skill(self, name):
+        return (SKILLS / name / "SKILL.md").read_text(encoding="utf-8")
+
+    def test_update_commands_exist_and_only_the_user_starts_them(self):
+        for name in ("mra-flow-version-check", "mra-flow-update"):
+            text = self.skill(name)
+            self.assertIn(f"name: {name}\n", text)
+            self.assertIn("disable-model-invocation: true", text)
+            self.assertIn("python3 .mra-flow/hooks/check-update.py check", text)
+
+    def test_update_installs_through_the_installer_after_confirmation(self):
+        text = self.skill("mra-flow-update")
+        self.assertIn("install.sh --update v<target>", text)
+        self.assertIn("AskUserQuestion", text)
+
+    def test_mra_drift_acknowledges_the_hook_only_when_complete(self):
+        text = self.skill("mra-drift")
+        self.assertIn("python3 .mra-flow/hooks/check-drift.py ack", text)
+        self.assertIn("Only when run without a capability argument", text)

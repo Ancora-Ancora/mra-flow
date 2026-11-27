@@ -268,9 +268,11 @@ flowchart LR
     ss["SessionStart<br/>startup · clear · compact"]:::hook --> bp["bd prime<br/>beads rules + bd memories"]:::hook
     ss --> lh["load-handoff.py<br/>newest handoff only"]:::hook
     lh -- "if read: false → inject, mark read: true" --> hf
-    ss2["SessionStart<br/>startup · resume"]:::hook --> cd["check-drift.py<br/>no repos yet, or per repo: origin/HEAD sha vs. drift-state.json<br/>roadmap: changes but none → --retro go-live · a second or in days → /mra-roadmap #lt;initiative#gt;"]:::hook
+    ss2["SessionStart<br/>startup · clear"]:::hook --> cd["check-drift.py<br/>no repos yet, or per repo: origin/HEAD sha vs. drift-state.json<br/>roadmap: changes but none → --retro go-live · a second or in days → /mra-roadmap #lt;initiative#gt;"]:::hook
     cd -- "no repos registered → recommend, don't run" --> mr["mra-repo add"]
-    cd -- "sha moved since last check → recommend, don't run" --> dr["<b class='t'>/mra-drift</b>"]
-    ss2 --> cu["check-update.py<br/>newest vX.Y.Z tag on the remote (once per 24h) vs. .mra-flow/version"]:::hook
-    cu -- "newer release → recommend the update command, don't run" --> up["git checkout vX.Y.Z · install.sh"]
+    cd -- "sha moved past the acknowledged one → ask: now · later · ignore" --> dr["<b class='t'>/mra-drift</b>"]
+    dr -- "no capability → check-drift.py ack" --> cd
+    ss2 --> cu["check-update.py<br/>newest vX.Y.Z tag on the remote (once per 4h) vs. .mra-flow/version"]:::hook
+    cu -- "newer, not ignored → ask: now · later · ignore" --> up["<b class='t'>/mra-flow-update</b><br/>confirm · install.sh --update · commit"]
+    vc["<b class='t'>/mra-flow-version-check</b>"] -- "asks the remote now" --> cu
 ```
