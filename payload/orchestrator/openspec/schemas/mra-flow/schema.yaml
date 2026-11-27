@@ -211,6 +211,14 @@ artifacts:
         changed screen, its `preview:` line as `.mra-flow/docs/agents/ui-preview.md`
         defines it (prototype note, accepted sketch with the ASCII block, or
         declined with the reason). Omit otherwise.
+      - **Module design**: only for a module that other changes or
+        slices will reuse, or a seam (`.mra-flow/docs/agents/module-design.md`),
+        designed with `mattpocock-skills:codebase-design` before this file is
+        written: one `### <module>` with its Interface (what a caller must
+        know: entry points, inputs/outputs, invariants, error modes), Seam
+        (where it lives, its adapters), Rejected (each alternative with why it
+        lost) and Callers (later changes or slices). Or the line
+        `module design: declined (<reason>)`. Omit otherwise.
       - **Risks / Trade-offs**: Known limitations, things that could go wrong. Format: [Risk] → Mitigation
       - **Migration Plan**: Steps to deploy, rollback strategy (if applicable)
       - **Open Questions**: Unknowns that can safely be answered later without

@@ -24,6 +24,10 @@
 
 <!-- Only if the change touches a repo's ui_paths: one bullet per screen, "<route> - roles: <...> - states: <...> - viewports: desktop|mobile". /mra-qa-ui checks these. Under each new or changed screen: "preview: prototype docs/prototypes/<slug>.md | sketch accepted | declined (<reason>)" (.mra-flow/docs/agents/ui-preview.md). Omit otherwise -->
 
+## Module design
+
+<!-- Only for a module other changes or slices will reuse, or a seam (.mra-flow/docs/agents/module-design.md): one "### <module>" each with Interface, Seam, Rejected (alternatives, one line each with why), Callers; or "module design: declined (<reason>)". Omit otherwise -->
+
 ## Risks / Trade-offs
 
 <!-- Known risks and trade-offs -->

@@ -36,14 +36,14 @@ flowchart LR
     wayfinder(["<b class='t'>/mattpocock-skills:wayfinder</b><br/>optional · effort mostly open decisions<br/><b>Matt Pocock</b>"]):::mpwrapopt
     explore(["<b class='t'>/mra-explore</b><br/>optional<br/><b>OpenSpec</b><br/>openspec-explore"]):::oswrapopt
     grill["<b class='t'>/mra-grill</b><br/>1 · grill<br/><b>Matt Pocock</b><br/>grilling<br/>domain-modeling"]:::mpwrap
-    propose["<b class='t'>/mra-propose</b><br/>2 · propose<br/><span class='bos'><b>OpenSpec</b><br/>openspec-propose<br/>openspec-update-change</span><br/><span class='bmp'><b>Matt Pocock</b><br/>domain-modeling</span>"]:::striped
+    propose["<b class='t'>/mra-propose</b><br/>2 · propose<br/><span class='bos'><b>OpenSpec</b><br/>openspec-propose<br/>openspec-update-change</span><br/><span class='bmp'><b>Matt Pocock</b><br/>domain-modeling<br/>codebase-design</span>"]:::striped
     track["<b class='t'>/mra-track</b><br/>3 · track"]:::phase
     build["<b class='t'>/mra-build</b><br/>4 · build<br/><b>superpowers</b><br/>using-git-worktrees<br/>writing-plans<br/>subagent-driven-development<br/>test-driven-development"]:::spwrap
     verify["<b class='t'>/mra-verify</b><br/>5 · verify<br/><span class='bsp'><b>superpowers</b><br/>verification-before-completion<br/>receiving-code-review</span><br/><span class='bmp'><b>Matt Pocock</b><br/>code-review</span><br/><span class='bcu'>custom</span>"]:::striped
     qaui(["<b class='t'>/mra-qa-ui</b><br/>verify step · or alone<br/><span class='bsp'><b>superpowers</b><br/>verification-before-completion</span><br/><span class='bcu'>custom</span>"]):::stripedopt
     fix["<b class='t'>/mra-fix</b><br/>6 · fix<br/><span class='bsp'><b>superpowers</b><br/>systematic-debugging<br/>test-driven-development</span><br/><span class='bmp'><b>Matt Pocock</b><br/>diagnosing-bugs</span>"]:::striped
     archive["<b class='t'>/mra-archive</b><br/>7 · archive<br/><span class='bos'><b>OpenSpec</b><br/>openspec-archive-change</span><br/><span class='bsp'><b>superpowers</b><br/>finishing-a-development-branch</span><br/><span class='bcu'>custom</span>"]:::striped
-    update["<b class='t'>/mra-update</b><br/>any time<br/><span class='bos'><b>OpenSpec</b><br/>openspec-update-change</span><br/><span class='bmp'><b>Matt Pocock</b><br/>domain-modeling</span><br/><span class='bcu'>custom</span>"]:::striped
+    update["<b class='t'>/mra-update</b><br/>any time<br/><span class='bos'><b>OpenSpec</b><br/>openspec-update-change</span><br/><span class='bmp'><b>Matt Pocock</b><br/>domain-modeling<br/>codebase-design</span><br/><span class='bcu'>custom</span>"]:::striped
     sync["<b class='t'>/mra-sync</b><br/>rare<br/><b>OpenSpec</b><br/>openspec-sync-specs"]:::oswrap
     hotfix["<b class='t'>/mra-hotfix</b><br/>rare · archived feature<br/><span class='bsp'><b>superpowers</b><br/>using-git-worktrees<br/>systematic-debugging<br/>test-driven-development<br/>verification-before-completion<br/>finishing-a-development-branch</span><br/><span class='bmp'><b>Matt Pocock</b><br/>diagnosing-bugs</span><br/><span class='bcu'>custom</span>"]:::striped
     drift(["<b class='t'>/mra-drift</b><br/>any time · read-only"]):::optional
@@ -137,11 +137,13 @@ flowchart TB
     end
     subgraph PR["<b class='t'>/mra-propose</b>"]
         direction TB
-        pr["<b class='t'>/mra-propose</b><br/><span class='bos'>OpenSpec</span><span class='bmp'>mattpocock</span>"]:::striped --> pr1["openspec-propose"]:::os
+        pr["<b class='t'>/mra-propose</b><br/><span class='bos'>OpenSpec</span><span class='bmp'>mattpocock</span>"]:::striped -. "shared module or seam" .-> pr0["mattpocock-skills:codebase-design<br/>design it twice"]:::mp
+        pr0 --> pr1
+        pr --> pr1["openspec-propose"]:::os
         pr1 --> pr2["openspec validate --strict"]:::os
         pr2 -- gaps --> pr3["openspec-update-change"]:::os
         pr2 -- ADR candidates --> pr4["mattpocock-skills:domain-modeling"]:::mp
-        pr2 --> prA["openspec/changes/#lt;id#gt;/<br/>proposal · specs/ · design.md (Contract sections) · tasks.md"]:::art
+        pr2 --> prA["openspec/changes/#lt;id#gt;/<br/>proposal · specs/ · design.md (Contract, Module design) · tasks.md"]:::art
     end
     subgraph TR["<b class='t'>/mra-track</b>"]
         direction TB
@@ -233,6 +235,7 @@ flowchart LR
     classDef bd fill:#ffc9c9,stroke:#1e1e1e,color:#1e1e1e
 
     up["<b class='t'>/mra-update</b><br/><span class='bos'>OpenSpec</span><span class='bmp'>mattpocock</span><span class='bcu'>custom</span>"]:::striped --> up1["mattpocock-skills:domain-modeling<br/>new decision → ADR"]:::mp
+    up -. "shared module or seam" .-> up4["mattpocock-skills:codebase-design<br/>design it twice"]:::mp
     up --> up2["openspec-update-change"]:::os
     up --> up3["reconcile beads<br/>/mra-track steps · bd dep"]:::bd
     sy["<b class='t'>/mra-sync</b>"]:::oswrap --> sy1["openspec-sync-specs"]:::os

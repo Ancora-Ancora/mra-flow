@@ -90,6 +90,7 @@ created: <YYYY-MM-DD>
 ## Risks and open points
 
 - [slice <#>] <open point the per-change /mra-grill must settle>
+- [slice <#>] module design: <module> (the slice sets a pattern later slices reuse; `.mra-flow/docs/agents/module-design.md`)
 - [all] <cross-cutting risk>
 
 ## Log

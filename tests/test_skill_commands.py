@@ -123,6 +123,34 @@ class UiPreviewTest(unittest.TestCase):
         self.assertNotIn("ui-preview.md", text)
 
 
+MODULE_DESIGN = PAYLOAD / "orchestrator" / ".mra-flow" / "docs" / "agents" / "module-design.md"
+DESIGN_TEMPLATE = PAYLOAD / "orchestrator" / "openspec" / "schemas" / "mra-flow" / "templates" / "design.md"
+
+
+class ModuleDesignTest(unittest.TestCase):
+    def skill(self, name):
+        return (SKILLS / name / "SKILL.md").read_text(encoding="utf-8")
+
+    def test_rule_file_names_the_skill_the_procedure_and_the_section(self):
+        text = MODULE_DESIGN.read_text(encoding="utf-8")
+        for part in ("`mattpocock-skills:codebase-design`", "`DESIGN-IT-TWICE.md`", "`## Module design`", "module design: declined (<reason>)"):
+            self.assertIn(part, text)
+
+    def test_skills_that_run_or_flag_it_point_to_the_rule(self):
+        for name in ("mra-roadmap", "mra-propose", "mra-update"):
+            self.assertIn("`.mra-flow/docs/agents/module-design.md`", self.skill(name), name)
+        for name in ("mra-propose", "mra-update"):
+            self.assertIn("`mattpocock-skills:codebase-design`", self.skill(name), name)
+
+    def test_design_template_has_the_section(self):
+        self.assertIn("\n## Module design\n", DESIGN_TEMPLATE.read_text(encoding="utf-8"))
+
+    def test_late_phases_do_not_run_it(self):
+        # Once tasks and a plan exist, a new interface means redoing specs and plan.
+        for name in ("mra-grill", "mra-build", "mra-verify", "mra-fix", "mra-hotfix"):
+            self.assertNotIn("codebase-design", self.skill(name), name)
+
+
 ROADMAP = PAYLOAD / "orchestrator" / ".mra-flow" / "docs" / "agents" / "roadmap.md"
 
 
