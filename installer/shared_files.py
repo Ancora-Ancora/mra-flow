@@ -21,6 +21,7 @@ GITIGNORE_LINES = (".worktrees/", "handoff/", ".beads/issues.jsonl", ".mra-flow/
                    ".mra-flow/update-state.json")
 DRIFT_HOOK_SCRIPT = ".mra-flow/hooks/check-drift.py"
 UPDATE_HOOK_SCRIPT = ".mra-flow/hooks/check-update.py"
+GUARD_HOOK_SCRIPT = ".mra-flow/hooks/guard-installed.py"
 
 # User layer (paths relative to the Claude Code config dir).
 USER_IMPORT_LINE = "@mra-flow/CLAUDE.md"
@@ -56,6 +57,18 @@ def update_hook_entry(root: Path) -> dict:
     }
 
 
+# The tools that write a file; the guard keeps the installed copy read-only for them.
+GUARD_HOOK_MATCHER = "Edit|Write|MultiEdit|NotebookEdit"
+
+
+def guard_hook_entry(root: Path) -> dict:
+    command = f'python3 "{root / GUARD_HOOK_SCRIPT}"'
+    return {
+        "matcher": GUARD_HOOK_MATCHER,
+        "hooks": [{"type": "command", "command": command, "timeout": 10}],
+    }
+
+
 def ensure_import(claude_md: Path, line: str) -> bool:
     if not claude_md.exists():
         claude_md.parent.mkdir(parents=True, exist_ok=True)
@@ -75,8 +88,8 @@ def ensure_claude_import(root: Path) -> bool:
 
 
 def merge_settings(path: Path, *, hook: dict | None = None,
-                   plugins: Iterable[str] = ()) -> bool:
-    """Add `hook` to hooks.SessionStart (replacing any entry running HOOK_SCRIPT)
+                   plugins: Iterable[str] = (), event: str = "SessionStart") -> bool:
+    """Add `hook` to hooks.<event> (replacing any entry running the same script)
     and enable `plugins` unless the user set them explicitly."""
     original = path.read_text(encoding="utf-8") if path.exists() else None
     try:
@@ -87,7 +100,7 @@ def merge_settings(path: Path, *, hook: dict | None = None,
         raise InstallError(f"{path} must hold a JSON object")
 
     if hook is not None:
-        session_start = settings.setdefault("hooks", {}).setdefault("SessionStart", [])
+        session_start = settings.setdefault("hooks", {}).setdefault(event, [])
         marker = _hook_marker(hook)
         ours = [i for i, e in enumerate(session_start) if _runs_hook_script(e, marker)]
         if ours:

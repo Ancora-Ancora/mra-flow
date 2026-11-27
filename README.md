@@ -105,7 +105,7 @@ Start a new Claude Code session in the orchestrator and check:
 
 1. **Handoff hook.** Write a handoff (`/mattpocock-skills:handoff`), then `/clear`: the new session gets it injected exactly once, and its frontmatter turns to `read: true`. The hook is registered only in `~/.claude/settings.json`, not in the project's settings.
 2. **Conventions.** `/memory` lists both `~/.claude/mra-flow/CLAUDE.md` and `.mra-flow/CLAUDE.md` as loaded.
-3. **Skills.** Typing `/mra` offers the 18 `mra-*` commands. The agent does not list them among its own skills: they set `disable-model-invocation: true`, so only you can start a phase.
+3. **Skills.** Typing `/mra` offers the 19 `mra-*` commands. The agent does not list them among its own skills: they set `disable-model-invocation: true`, so only you can start a phase.
 4. **Repos.** `.mra-flow/bin/mra-repo list` prints your code repos, dependencies first.
 5. **Plugins.** Typing `/superpowers:` and `/mattpocock-skills:` offers their commands.
 6. **Spec-drift check hook.** After a code repo's default branch gets a new commit upstream (push it from another clone, or wait for a colleague's), start a new session (or `/clear`): it tells you new commits landed on that repo and asks whether to run `/mra-drift` now, later (it asks again on the next session start or `/clear`) or ignore those commits. `/mra-drift` without a capability acknowledges them when done. The same hook also reminds you every session, before any repo is declared, to run `mra-repo add`. It is registered in the project's `.claude/settings.json`, not `~/.claude/settings.json`: it needs `mra-flow.toml`, which only exists in an orchestrator.
@@ -113,6 +113,8 @@ Start a new Claude Code session in the orchestrator and check:
    A second SessionStart hook, `check-update.py`, on the same events, asks the mra-flow remote (at most once every 4 hours) for its newest `vX.Y.Z` tag and, when it is newer than the installed `.mra-flow/version`, asks whether to update now (`/mra-flow-update`), later, or ignore that release. `/mra-flow-version-check` asks the remote at once. Set `MRA_FLOW_REMOTE` to point it at another remote.
 
 ## Update
+
+The installed copy in an orchestrator is read-only for Claude Code sessions: a PreToolUse hook, `guard-installed.py`, denies edits to the files in `.mra-flow/manifest` (and to new files under `.claude/skills/mra-*` and `.mra-flow/`) and points at the same file in your source clone (`MRA_FLOW_SRC`, default `~/mra-flow`). Change mra-flow there, or with `/mra-flow-change <description>` from any orchestrator, release it, then update each orchestrator.
 
 From a Claude Code session in the orchestrator: `/mra-flow-version-check` shows the newest release and what it changes; `/mra-flow-update [X.Y.Z] [--user]` shows the same, warns about in-flight changes and other active sessions, asks for confirmation, runs the installer and proposes the commit. By hand:
 

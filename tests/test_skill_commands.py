@@ -310,3 +310,16 @@ class SessionStartChecksTest(unittest.TestCase):
         text = self.skill("mra-drift")
         self.assertIn("python3 .mra-flow/hooks/check-drift.py ack", text)
         self.assertIn("Only when run without a capability argument", text)
+
+
+class ChangeMraFlowTest(unittest.TestCase):
+    def test_change_skill_works_in_the_source_clone_and_asks_before_releasing(self):
+        text = (SKILLS / "mra-flow-change" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("disable-model-invocation: true", text)
+        self.assertIn("MRA_FLOW_SRC", text)
+        self.assertIn("<clone>/payload/orchestrator/<rel>", text)
+        self.assertIn("AskUserQuestion", text)
+
+    def test_guard_names_the_change_skill(self):
+        guard = (PAYLOAD / "orchestrator/.mra-flow/hooks/guard-installed.py").read_text(encoding="utf-8")
+        self.assertIn("/mra-flow-change", guard)

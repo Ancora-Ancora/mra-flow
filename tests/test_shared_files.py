@@ -60,6 +60,13 @@ class SettingsTest(TmpTestCase):
         for entry in (sf.drift_hook_entry(self.tmp), sf.update_hook_entry(self.tmp)):
             self.assertEqual(entry["matcher"], "startup|clear")
 
+    def test_guard_goes_to_pre_tool_use(self):
+        guard = sf.guard_hook_entry(self.tmp)
+        self.assertEqual(guard["matcher"], "Edit|Write|MultiEdit|NotebookEdit")
+        sf.merge_settings(self.path(), hook=guard, event="PreToolUse")
+        sf.merge_settings(self.path(), hook=guard, event="PreToolUse")
+        self.assertEqual(self.load()["hooks"], {"PreToolUse": [guard]})
+
     def test_two_different_hooks_coexist(self):
         drift = sf.drift_hook_entry(self.tmp)
         self.merge()

@@ -99,9 +99,10 @@ def install_orchestrator(root: Path, package: Path = PACKAGE_ROOT) -> int:
     changed = sf.merge_settings(settings, hook=sf.drift_hook_entry(root),
                                 plugins=sf.REQUIRED_PLUGINS)
     changed |= sf.merge_settings(settings, hook=sf.update_hook_entry(root))
+    changed |= sf.merge_settings(settings, hook=sf.guard_hook_entry(root), event="PreToolUse")
     if changed:
-        notes.append("enabled the required plugins and the spec-drift and update check hooks "
-                     "in .claude/settings.json")
+        notes.append("enabled the required plugins, the spec-drift and update check hooks and "
+                     "the installed-copy guard in .claude/settings.json")
     if sf.ensure_gitignore(root):
         notes.append("updated .gitignore")
     if env.ensure_registry(root):

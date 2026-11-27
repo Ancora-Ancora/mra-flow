@@ -44,6 +44,7 @@ Every feature goes through the `mra-flow` workflow (diagram: `.mra-flow/docs/mra
 | when stuck on design, or a new UI screen | `/mra-prototype <question>` | note in `docs/prototypes/`, verdict as ADR or carried decision; prototype kept on branch `prototype/<slug>` |
 | any time | `/mra-flow-version-check` | installed vs. newest mra-flow release and what it changes, read-only |
 | any time | `/mra-flow-update [X.Y.Z] [--user]` | mra-flow updated after confirmation, commit proposed |
+| any time | `/mra-flow-change <description>` | change to mra-flow itself, made, tested and committed in its source clone; release on confirmation |
 | end of session | `/mattpocock-skills:handoff [next focus]` | `handoff/ho-<datetime>.md` (`read: false`), auto-loaded once by the next session (handoff rules: installed with `install.sh --user`) |
 
 Rules:
@@ -64,13 +65,17 @@ Rules:
 - A SessionStart hook (`.mra-flow/hooks/check-drift.py`, on a new session and on `/clear`) checks the code repos' default branches. When one moved past the commit last acknowledged, the session asks the user: check now (`/mra-drift`), later (asked again next time) or ignore (`check-drift.py ack <key>`). `/mra-drift` without a capability acknowledges them at its end. Its state file, `.mra-flow/drift-state.json`, is local and git-ignored.
 - A second SessionStart hook (`.mra-flow/hooks/check-update.py`, same events) asks the mra-flow remote at most once every 4 hours for its newest release tag. While it is newer than `.mra-flow/version`, the session asks the user: update now (`/mra-flow-update`), later, or ignore that release (`check-update.py ignore X.Y.Z`). `/mra-flow-version-check` asks the remote at once. Its state file, `.mra-flow/update-state.json`, is local and git-ignored; `MRA_FLOW_REMOTE` overrides the remote.
 
+### Changing mra-flow itself
+
+`.claude/skills/mra-*` and `.mra-flow/` are a copy of mra-flow installed here (listed in `.mra-flow/manifest`). Never edit them in this repo: a change to the workflow is made in the mra-flow source clone (`MRA_FLOW_SRC`, default `~/mra-flow`) with `/mra-flow-change`, released, then installed with `/mra-flow-update`. A PreToolUse hook (`.mra-flow/hooks/guard-installed.py`) denies file edits to the installed copy and points at the matching source file; the hooks' `*-state.json` files stay writable. Without a source clone, propose an issue on mra-flow instead.
+
 ### How this overrides the beads defaults
 
 The beads context injected by `bd prime` is subordinate to this section (task tracking and memory rules come from the user-level conventions):
 
 - **When issues are created:** only in `/mra-roadmap` (initiative and slice epics, never tasks), `/mra-track`, `/mra-build`, `/mra-verify` (and its `/mra-qa-ui` step), `/mra-fix`, `/mra-hotfix` and `/mra-update`. Exploring, grilling and proposing create no issues.
 - **Creating issues:** sequentially, from the skill doing the work; no parallel subagents for issue creation.
-- **Commit authority:** invoking `/mra-build` or `/mra-fix` authorizes commits on the `change/<change-id>` branches inside `.worktrees/`. Invoking `/mra-hotfix` authorizes commits on its `hotfix/<bd-id>` branches. Invoking `/mra-prototype` authorizes commits on its `prototype/<slug>` branch, which is never merged or pushed. Push, merge and PRs happen only in `/mra-archive` and at the end of `/mra-hotfix`, with the user choosing the option per repo (or, when `mra-flow.toml` declares an `[integration] command`, choosing between that command and keep). Commits in this orchestrator repo always need the user's confirmation.
+- **Commit authority:** invoking `/mra-build` or `/mra-fix` authorizes commits on the `change/<change-id>` branches inside `.worktrees/`. Invoking `/mra-hotfix` authorizes commits on its `hotfix/<bd-id>` branches. Invoking `/mra-prototype` authorizes commits on its `prototype/<slug>` branch, which is never merged or pushed. Invoking `/mra-flow-change` authorizes commits on its branch in the mra-flow source clone; releasing it needs the user's answer. Push, merge and PRs happen only in `/mra-archive` and at the end of `/mra-hotfix`, with the user choosing the option per repo (or, when `mra-flow.toml` declares an `[integration] command`, choosing between that command and keep). Commits in this orchestrator repo always need the user's confirmation.
 
 ## Agent skills
 

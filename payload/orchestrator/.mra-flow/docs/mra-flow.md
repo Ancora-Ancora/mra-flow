@@ -275,4 +275,7 @@ flowchart LR
     ss2 --> cu["check-update.py<br/>newest vX.Y.Z tag on the remote (once per 4h) vs. .mra-flow/version"]:::hook
     cu -- "newer, not ignored → ask: now · later · ignore" --> up["<b class='t'>/mra-flow-update</b><br/>confirm · install.sh --update · commit"]
     vc["<b class='t'>/mra-flow-version-check</b>"] -- "asks the remote now" --> cu
+    pt["PreToolUse<br/>Edit · Write · MultiEdit · NotebookEdit"]:::hook --> gi["guard-installed.py<br/>installed copy (.mra-flow/manifest) is read-only"]:::hook
+    gi -- "deny → the same file in the source clone" --> ch["<b class='t'>/mra-flow-change</b><br/>branch · change · tests · commit · release on confirmation"]
+    ch -- "released" --> up
 ```
