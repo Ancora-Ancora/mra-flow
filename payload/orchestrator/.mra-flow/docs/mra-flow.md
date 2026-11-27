@@ -121,7 +121,7 @@ flowchart TB
     end
     subgraph RM["<b class='t'>/mra-roadmap</b>"]
         direction TB
-        rm["<b class='t'>/mra-roadmap</b><br/><span class='bmp'>mattpocock</span><span class='bcu'>custom</span>"]:::striped --> rm0["one initiative per project · seed: new · revise (merge, days → hours) · --from wayfinder map · --retro every change, done and not"]:::step
+        rm["<b class='t'>/mra-roadmap</b><br/><span class='bmp'>mattpocock</span><span class='bcu'>custom</span>"]:::striped --> rm0["one initiative per project (go-live by default) · seed: new · revise (merge, days → hours) · --from wayfinder map · --retro every change, done and not"]:::step
         rm0 --> rm1["mattpocock-skills:grilling<br/>breadth-first"]:::mp
         rm0 --> rm2["mattpocock-skills:domain-modeling"]:::mp
         rm1 -. "cut or size depends on it" .-> rm5["recommend /mra-prototype · /mra-research"]:::step
@@ -268,7 +268,7 @@ flowchart LR
     ss["SessionStart<br/>startup · clear · compact"]:::hook --> bp["bd prime<br/>beads rules + bd memories"]:::hook
     ss --> lh["load-handoff.py<br/>newest handoff only"]:::hook
     lh -- "if read: false → inject, mark read: true" --> hf
-    ss2["SessionStart<br/>startup · resume"]:::hook --> cd["check-drift.py<br/>no repos yet, or per repo: origin/HEAD sha vs. drift-state.json<br/>roadmap: changes but none → --retro · other or in days → /mra-roadmap #lt;project#gt;"]:::hook
+    ss2["SessionStart<br/>startup · resume"]:::hook --> cd["check-drift.py<br/>no repos yet, or per repo: origin/HEAD sha vs. drift-state.json<br/>roadmap: changes but none → --retro go-live · a second or in days → /mra-roadmap #lt;initiative#gt;"]:::hook
     cd -- "no repos registered → recommend, don't run" --> mr["mra-repo add"]
     cd -- "sha moved since last check → recommend, don't run" --> dr["<b class='t'>/mra-drift</b>"]
     ss2 --> cu["check-update.py<br/>newest vX.Y.Z tag on the remote (once per 24h) vs. .mra-flow/version"]:::hook

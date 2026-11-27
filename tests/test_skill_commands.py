@@ -166,7 +166,7 @@ class RoadmapTest(unittest.TestCase):
     def test_roadmap_skill_has_all_modes_and_is_user_invoked(self):
         text = self.skill("mra-roadmap")
         self.assertIn("disable-model-invocation: true", text)
-        for mode in ("--from <map-epic>", "--retro [<project>]", "**revise**"):
+        for mode in ("--from <map-epic>", "--retro [<initiative>, default go-live]", "**revise**"):
             self.assertIn(mode, text)
 
     def test_slice_epics_are_found_by_slice_metadata_as_json(self):
@@ -204,13 +204,15 @@ class RoadmapTest(unittest.TestCase):
             text = self.skill(name)
             self.assertIn("*A roadmap found missing late*", text, name)
             self.assertIn("`/mra-roadmap --retro` once", text, name)
-            self.assertIn("`/mra-roadmap <project>`", text, name)
+            self.assertIn("`/mra-roadmap <initiative>`", text, name)
 
     def test_one_initiative_per_project(self):
         rule = ROADMAP.read_text(encoding="utf-8")
         self.assertIn("\n## One initiative per project\n", rule)
-        self.assertIn('basename "$(git rev-parse --show-toplevel)"', rule)
-        self.assertIn("merged into initiative <project>", rule)
+        self.assertIn("`go-live` by default", rule)
+        self.assertIn("uses the name typed on the command instead", rule)
+        self.assertIn("merged into initiative <initiative>", rule)
+        self.assertIn("propose `go-live` as that argument", self.skill("mra-roadmap"))
         text = self.skill("mra-roadmap")
         self.assertIn("*One initiative per project*", text)
         self.assertIn("archived ones included", text)

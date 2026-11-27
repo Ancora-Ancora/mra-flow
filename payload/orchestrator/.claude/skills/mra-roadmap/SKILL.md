@@ -2,18 +2,18 @@
 name: mra-roadmap
 description: Use when an effort in an mra-flow orchestrator is too large for one change and needs to be cut into estimated slices before the first change - the optional initiative level above phase 1 of the mra-flow workflow.
 disable-model-invocation: true
-argument-hint: <topic> | <project> (revise) | --from <wayfinder-map-epic> | --retro [<project>]
+argument-hint: <topic> | <initiative> (revise) | --from <wayfinder-map-epic> | --retro [<initiative>, default go-live]
 ---
 
 # mra-roadmap — initiative: breadth grill, slices and estimates
 
-Cut the effort in `$ARGUMENTS` into slices, one change each, estimate them and record the result as `docs/roadmap/<initiative>.md` plus an initiative epic with one slice epic per slice. The project has **one** initiative, named after the project, and every change is a slice of it (*One initiative per project*). The file format, the size scale, the totals, the actuals and the beads conventions are in `.mra-flow/docs/agents/roadmap.md`: read it first and follow it exactly.
+Cut the effort in `$ARGUMENTS` into slices, one change each, estimate them and record the result as `docs/roadmap/<initiative>.md` plus an initiative epic with one slice epic per slice. The project has **one** initiative, `go-live` unless the user names it otherwise, and every change is a slice of it (*One initiative per project*). The file format, the size scale, the totals, the actuals and the beads conventions are in `.mra-flow/docs/agents/roadmap.md`: read it first and follow it exactly.
 
 ## Modes
 
 Pick the mode from `$ARGUMENTS`:
 
-The initiative is always `<project>`, the orchestrator repo's directory name; an argument naming another initiative is read as a topic.
+The initiative is the one roadmap in `docs/roadmap/`, whatever its name. When there is none yet, it is named by the argument (`--retro <name>`, `/mra-roadmap <name>`), and `go-live` when the command gives none: propose `go-live` as that argument, and use the name typed instead when the user gives another. Once a roadmap exists, an argument naming another initiative is read as a topic.
 
 - **new** — a topic, no roadmap yet and no change yet (nothing archived, in flight or tracked);
 - **revise** — the project's roadmap exists: a topic adds its slices to it; any other `docs/roadmap/*.md` is merged into it and a roadmap in days is converted (step 2);

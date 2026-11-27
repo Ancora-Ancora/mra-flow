@@ -44,7 +44,7 @@ DRIFT_HOOK = ".mra-flow/hooks/check-drift.py"
 
 def roadmap_notes(root: Path, payload: Path) -> list[str]:
     """Every install and update: the same roadmap check as the SessionStart hook (ADR-0012),
-    changes without a roadmap -> --retro, another roadmap or one in days -> /mra-roadmap <project>."""
+    changes without a roadmap -> --retro go-live, a second roadmap or one in days -> /mra-roadmap <initiative>."""
     import importlib.util
     spec = importlib.util.spec_from_file_location("mra_check_drift", payload / DRIFT_HOOK)
     hook = importlib.util.module_from_spec(spec)

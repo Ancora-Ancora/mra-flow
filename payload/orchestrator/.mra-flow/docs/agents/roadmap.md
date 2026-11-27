@@ -4,10 +4,10 @@ An **initiative** is an effort too large for one change. Its **roadmap**, `docs/
 
 ## One initiative per project
 
-An orchestrator has **one** initiative, named after the project: the orchestrator repo's directory name (`basename "$(git rev-parse --show-toplevel)"`), so its roadmap is `docs/roadmap/<project>.md` and its label `roadmap:<project>`. Every change is a slice of it, done, in progress and planned alike, so one effort file shows them all with their estimates (ADR-0012 of mra-flow).
+An orchestrator has **one** initiative. Its name is `go-live` by default: `/mra-roadmap` proposes it as the argument, and uses the name typed on the command instead when the user gives another (`/mra-roadmap --retro first-release`). Its roadmap is `docs/roadmap/<initiative>.md` and its label `roadmap:<initiative>`; once it exists, that roadmap is the project's initiative whatever its name, and every later `/mra-roadmap` works on it. Every change is a slice of it, done, in progress and planned alike, so one effort file shows them all with their estimates (ADR-0012 of mra-flow).
 
 - A new effort (a new topic for `/mra-roadmap`, a change found too large) adds slices to that roadmap: revise mode, never a second roadmap.
-- Any other `docs/roadmap/*.md` (an initiative with another name, from before this rule) is merged into the project's roadmap by `/mra-roadmap`: its slices are appended after the existing ones and renumbered (their *Depends on* too), its Destination, Scope, constraints, Decisions, Assumptions and Risks join the project's, its Log lines are carried with a `(roadmap <name>, merged here)` mark, its file is removed; in beads its slice epics are reparented under the project's initiative epic, every issue labelled `roadmap:<name>` is relabelled `roadmap:<project>`, and its initiative epic is closed with `--reason "merged into initiative <project>"`.
+- A second `docs/roadmap/*.md` (from before this rule) is merged by `/mra-roadmap` into the one kept: `go-live.md` when it exists, else the oldest by its `created:`: its slices are appended after the existing ones and renumbered (their *Depends on* too), its Destination, Scope, constraints, Decisions, Assumptions and Risks join the project's, its Log lines are carried with a `(roadmap <name>, merged here)` mark, its file is removed; in beads its slice epics are reparented under the project's initiative epic, every issue labelled `roadmap:<name>` is relabelled `roadmap:<initiative>`, and its initiative epic is closed with `--reason "merged into initiative <initiative>"`.
 - The project's initiative epic is the parent of **every** change epic, archived ones included, so `bd epic status <initiative epic>` counts all of them.
 
 ## A roadmap in days
@@ -20,7 +20,7 @@ A change belongs to a roadmap when a row of the **Slices** table of some `docs/r
 
 ## A roadmap found missing late
 
-A change that belongs to no roadmap may turn out, once proposed or archived, to be part of a larger effort. Two phases look for it and recommend `/mra-roadmap --retro` when the project has no roadmap yet, or `/mra-roadmap <project>` (revise: add the change and the rest as slices) when it has one:
+A change that belongs to no roadmap may turn out, once proposed or archived, to be part of a larger effort. Two phases look for it and recommend `/mra-roadmap --retro` when the project has no roadmap yet, or `/mra-roadmap <initiative>` (revise: add the change and the rest as slices) when it has one:
 
 - `/mra-propose`: the change, estimated from `tasks.md` with the default size scale, is XL, or it touches more than one capability with a contract change; the change then enters the roadmap as a `proposed` slice and the rest becomes new slices.
 - `/mra-archive`: the proposal or design names work left for later (follow-ups, a next change, out-of-scope items meant to be done), or other archived changes modify the same capabilities; list those changes as candidate done slices.

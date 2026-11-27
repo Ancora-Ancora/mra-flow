@@ -121,40 +121,50 @@ class RoadmapNoticeTest(TmpTestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         return done.stdout
 
-    def roadmap(self, name: str, unit: str = "h") -> None:
+    def roadmap(self, name: str, unit: str = "h", created: str = "2026-11-20") -> None:
         folder = self.orch / "docs/roadmap"
         folder.mkdir(parents=True, exist_ok=True)
-        (folder / f"{name}.md").write_text(f"## Slices\n\n| # | Estimate ({unit}) |\n")
+        (folder / f"{name}.md").write_text(
+            f"---\ninitiative: {name}\ncreated: {created}\n---\n\n## Slices\n\n| # | Estimate ({unit}) |\n")
 
     def test_no_changes_no_notice(self):
         self.assertEqual(self.run_hook(), "")
 
-    def test_changes_without_roadmap_recommend_retro_every_session(self):
+    def test_changes_without_roadmap_recommend_retro_with_the_default_name(self):
         (self.orch / "openspec/changes/archive/2026-01-01-add-a").mkdir(parents=True)
         out = json.loads(self.run_hook())
-        self.assertIn("/mra-roadmap --retro", out["systemMessage"])
-        self.assertIn("/mra-roadmap --retro", out["hookSpecificOutput"]["additionalContext"])
-        self.assertIn("/mra-roadmap --retro", self.run_hook())  # until the roadmap exists
+        self.assertIn("/mra-roadmap --retro go-live", out["systemMessage"])
+        self.assertIn("/mra-roadmap --retro go-live", out["hookSpecificOutput"]["additionalContext"])
+        self.assertIn("another name", out["hookSpecificOutput"]["additionalContext"])
+        self.assertIn("/mra-roadmap --retro go-live", self.run_hook())  # until the roadmap exists
 
     def test_in_flight_change_counts_too(self):
         (self.orch / "openspec/changes/add-a").mkdir(parents=True)
-        self.assertIn("/mra-roadmap --retro", self.run_hook())
+        self.assertIn("/mra-roadmap --retro go-live", self.run_hook())
 
-    def test_project_roadmap_in_hours_is_quiet(self):
+    def test_one_roadmap_in_hours_is_quiet_whatever_its_name(self):
         (self.orch / "openspec/changes/add-a").mkdir(parents=True)
-        self.roadmap("shop")
-        (self.orch / "docs/roadmap/shop-effort.md").write_text("generated\n")
+        self.roadmap("first-release")
+        (self.orch / "docs/roadmap/first-release-effort.md").write_text("generated\n")
         self.assertEqual(self.run_hook(), "")
 
-    def test_other_roadmap_is_to_be_merged(self):
-        self.roadmap("shop")
-        self.roadmap("go-live")
+    def test_a_second_roadmap_is_merged_into_go_live(self):
+        self.roadmap("go-live", created="2026-11-25")
+        self.roadmap("older", created="2026-11-01")
         out = self.run_hook()
-        self.assertIn("docs/roadmap/go-live.md", out)
-        self.assertIn("/mra-roadmap shop", out)
+        self.assertIn("docs/roadmap/older.md", out)
+        self.assertIn("/mra-roadmap go-live", out)
+        self.assertNotIn("docs/roadmap/go-live.md", out)
+
+    def test_without_go_live_the_oldest_roadmap_is_kept(self):
+        self.roadmap("mvp", created="2026-11-01")
+        self.roadmap("next", created="2026-11-20")
+        out = self.run_hook()
+        self.assertIn("docs/roadmap/next.md", out)
+        self.assertIn("/mra-roadmap mvp", out)
 
     def test_roadmap_in_days_is_to_be_converted(self):
-        self.roadmap("shop", unit="d")
+        self.roadmap("go-live", unit="d")
         out = self.run_hook()
         self.assertIn("in days", out)
-        self.assertIn("/mra-roadmap shop", out)
+        self.assertIn("/mra-roadmap go-live", out)

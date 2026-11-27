@@ -15,9 +15,9 @@ never to run it. A repo with `drift = false` in its table (out of scope for
 this orchestrator's changes) is never checked.
 
 It also keeps the project's one roadmap in shape (ADR-0012), every session
-until fixed: changes but no roadmap -> recommend `/mra-roadmap --retro`;
-another `docs/roadmap/*.md` -> merge it with `/mra-roadmap <project>`; the
-project's roadmap in person-days -> convert it the same way.
+until fixed: changes but no roadmap -> recommend `/mra-roadmap --retro go-live`;
+a second `docs/roadmap/*.md` -> merge it into go-live (or the oldest) with
+`/mra-roadmap <initiative>`; the roadmap in person-days -> convert it the same way.
 
 Never fails the session: a missing mra-flow.toml, an unreachable remote or an
 unreadable state file all end the hook silently.
@@ -86,9 +86,16 @@ def emit(system_message: str, context: str) -> None:
     )
 
 
+DEFAULT_INITIATIVE = "go-live"
+
+
+def _created(path: pathlib.Path) -> str:
+    found = re.search(r"^created:\s*(\S+)", path.read_text(encoding="utf-8", errors="replace"), re.M)
+    return found.group(1) if found else "9999"
+
+
 def roadmap_notices(root: pathlib.Path) -> list[tuple[str, str]]:
-    """What to recommend about the project's one roadmap, <root name>.md."""
-    project = root.name
+    """What to recommend about the project's one roadmap (ADR-0012)."""
     folder = root / "docs" / "roadmap"
     roadmaps = sorted(p for p in folder.glob("*.md") if not p.name.endswith("-effort.md")) \
         if folder.is_dir() else []
@@ -97,19 +104,23 @@ def roadmap_notices(root: pathlib.Path) -> list[tuple[str, str]]:
         found = changes.is_dir() and any(p.is_dir() and p.name != "archive" for p in changes.iterdir())
         archive = changes / "archive"
         found |= archive.is_dir() and any(p.is_dir() for p in archive.iterdir())
-        return [("changes but no roadmap — run /mra-roadmap --retro",
-                 "the project has OpenSpec changes but no roadmap: recommend `/mra-roadmap --retro`, which "
-                 "builds its one initiative with every change as a slice, estimates and actual hours")] \
-            if found else []
+        return [(f"changes but no roadmap — run /mra-roadmap --retro {DEFAULT_INITIATIVE}",
+                 f"the project has OpenSpec changes but no roadmap: recommend `/mra-roadmap --retro "
+                 f"{DEFAULT_INITIATIVE}`, which builds its one initiative with every change as a slice, "
+                 f"estimates and actual hours ({DEFAULT_INITIATIVE} is the default name: the user may type "
+                 "another name instead)")] if found else []
+    # The one to keep: go-live when present, else the oldest by its front matter.
+    keep = next((p for p in roadmaps if p.stem == DEFAULT_INITIATIVE), None) \
+        or min(roadmaps, key=lambda p: (_created(p), p.name))
     notices = []
     for path in roadmaps:
         rel = path.relative_to(root).as_posix()
-        if path.stem != project:
-            notices.append((f"{rel}: merge it with /mra-roadmap {project}",
-                            f"{rel} is not the project's one roadmap: merge it with `/mra-roadmap {project}`"))
+        if path != keep:
+            notices.append((f"{rel}: merge it with /mra-roadmap {keep.stem}",
+                            f"{rel} is a second roadmap: merge it with `/mra-roadmap {keep.stem}`"))
         elif re.search(r"\|\s*Estimate \(d\)\s*\|", path.read_text(encoding="utf-8", errors="replace")):
-            notices.append((f"{rel} in days: convert it with /mra-roadmap {project}",
-                            f"{rel} is in days: convert it with `/mra-roadmap {project}`"))
+            notices.append((f"{rel} in days: convert it with /mra-roadmap {keep.stem}",
+                            f"{rel} is in days: convert it with `/mra-roadmap {keep.stem}`"))
     return notices
 
 

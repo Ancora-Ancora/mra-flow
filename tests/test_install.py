@@ -109,7 +109,7 @@ class InstallTest(TmpTestCase):
         self.assertIn("/mra-roadmap --retro", self.ok().stdout)  # every update, until the roadmap exists
         (self.orch / "docs/roadmap").mkdir(parents=True)
         self.assertIn("/mra-roadmap --retro", self.ok().stdout)  # an empty folder is no roadmap
-        (self.orch / f"docs/roadmap/{self.orch.name}.md").write_text("| Estimate (h) |\n")
+        (self.orch / "docs/roadmap/go-live.md").write_text("| Estimate (h) |\n")
         self.assertNotIn("/mra-roadmap", self.ok().stdout)
 
     def test_no_roadmap_note_without_changes(self):
@@ -120,14 +120,14 @@ class InstallTest(TmpTestCase):
         self.ok()
         roadmaps = self.orch / "docs/roadmap"
         roadmaps.mkdir(parents=True)
-        (roadmaps / f"{self.orch.name}.md").write_text("| Estimate (h) |\n")
-        (roadmaps / f"{self.orch.name}-effort.md").write_text("generated\n")
-        self.assertNotIn("/mra-roadmap", self.ok().stdout)
         (roadmaps / "go-live.md").write_text("| Estimate (h) |\n")
-        self.assertIn(f"docs/roadmap/go-live.md is not the project's one roadmap: merge it with `/mra-roadmap {self.orch.name}`", self.ok().stdout)
-        (roadmaps / "go-live.md").unlink()
-        (roadmaps / f"{self.orch.name}.md").write_text("| Estimate (d) |\n")
-        self.assertIn(f"is in days: convert it with `/mra-roadmap {self.orch.name}`", self.ok().stdout)
+        (roadmaps / "go-live-effort.md").write_text("generated\n")
+        self.assertNotIn("/mra-roadmap", self.ok().stdout)
+        (roadmaps / "mvp.md").write_text("| Estimate (h) |\n")
+        self.assertIn("docs/roadmap/mvp.md is a second roadmap: merge it with `/mra-roadmap go-live`", self.ok().stdout)
+        (roadmaps / "mvp.md").unlink()
+        (roadmaps / "go-live.md").write_text("| Estimate (d) |\n")
+        self.assertIn("is in days: convert it with `/mra-roadmap go-live`", self.ok().stdout)
 
     def test_openspec_gate(self):
         before = snapshot(self.orch)
