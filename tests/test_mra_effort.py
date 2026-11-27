@@ -55,6 +55,11 @@ def command(minutes: float, name: str, args: str = "") -> dict:
                          f"\n<command-args>{args}</command-args>")
 
 
+def say(minutes: float, text: str) -> dict:
+    return {"type": "assistant", "timestamp": at(minutes), "message": {"role": "assistant", "content": [
+        {"type": "text", "text": text}]}}
+
+
 def tick(minutes: float) -> dict:
     return {"type": "assistant", "timestamp": at(minutes), "message": {"role": "assistant", "content": "ok"}}
 
@@ -79,6 +84,8 @@ class MraEffortTest(TmpTestCase):
             (sub / "agent-x.jsonl").write_text("\n".join(json.dumps(r) for r in subagent) + "\n")
 
     def run_effort(self, *args, env=None):
+        # never the real ~/.claude: report reads the default logs when given no --logs
+        env = env or dict(os.environ, CLAUDE_CONFIG_DIR=str(self.tmp / "claude-config"))
         return subprocess.run([sys.executable, str(self.orch / ".mra-flow/bin/mra-effort"), *args],
                               capture_output=True, text=True, env=env)
 
@@ -137,6 +144,49 @@ class MraEffortTest(TmpTestCase):
         self.assertIn(("/mra-grill a topic", "what is pending?"), contexts)
         self.assertIn("/mra-fix add-ab", [c for c, _ in contexts])
         self.assertFalse(any("add-other" in c or "after" in c for c, _ in contexts))
+
+    def test_command_without_change_id_is_inferred_from_the_session(self):
+        # A /mra-build typed with free text: the session keeps talking about add-a.
+        self.session("s1", [command(0, "mra-build", "go on with the tasks"),
+                            say(4, "Task 1 of add-a done; add-a next"), say(8, "add-a task 2"),
+                            command(20, "mra-verify", "add-a"), tick(26)])
+        result = self.measure()
+        self.assertAlmostEqual(result["phases"]["build"], 8 / 60, places=2)
+        self.assertEqual([(s["context"], s["phase"]) for s in result["inferred"]],
+                         [("/mra-build go on with the tasks", "build")])
+        self.assertEqual(result["start"], "2026-11-20 09:00")
+        self.assertEqual(result["unattributed"], [])
+        plain = self.measure("--no-infer")
+        self.assertEqual(set(plain["phases"]), {"verify"})
+        self.assertEqual(plain["inferred"], [])
+
+    def test_a_command_quoted_in_a_tool_result_starts_no_segment(self):
+        quoted = {"type": "user", "timestamp": at(5), "message": {"role": "user", "content": [
+            {"type": "tool_result", "content": "old log: <command-name>/mra-grill</command-name>"}]}}
+        # the mentions come after the quote: they still belong to the /mra-build segment
+        self.session("s1", [command(0, "mra-build", "go"), say(2, "reading the log"), quoted,
+                            say(6, "add-a add-a add-a"), tick(8)])
+        self.assertAlmostEqual(self.measure()["phases"]["build"], 8 / 60, places=2)
+
+    def test_inference_needs_a_clear_winner(self):
+        self.session("s1", [command(0, "mra-grill", "a topic"),
+                            say(3, "add-a add-a add-a and add-other add-other"), tick(8),
+                            command(20, "mra-verify", "add-a"), tick(26)])
+        result = self.measure()
+        self.assertNotIn("grill", result["phases"])
+        self.assertIn("/mra-grill a topic", [s["context"] for s in result["unattributed"]])
+
+    def test_inference_skips_initiative_commands(self):
+        self.session("s1", [command(0, "mra-roadmap", "--retro"),
+                            say(3, "add-a add-a add-a add-a"), tick(8),
+                            command(20, "mra-verify", "add-a"), tick(26)])
+        self.assertNotIn("other", self.measure()["phases"])
+
+    def test_text_output_lists_inferred_stretches(self):
+        self.session("s1", [command(0, "mra-build", "go"), say(4, "add-a add-a add-a"), tick(8)])
+        text = self.run_effort("measure", "add-a", "--logs", str(self.logs)).stdout
+        self.assertIn("inferred from the session (reject any that is wrong):", text)
+        self.assertIn("/mra-build go", text)
 
     def test_alias_counts_for_the_change(self):
         self.session("s1", [command(0, "mra-hotfix", "bd-77"), tick(9)])
@@ -228,6 +278,19 @@ class MraEffortTest(TmpTestCase):
         self.assertIn("| add-a | First slice | 2026-11-20 09:00 | 2026-11-21 17:30 | 5–8 |", report)
         self.assertIn("| add-c | Third slice |  |  | 8–12 |", report)
 
+    def test_report_shows_hours_so_far_of_open_slices(self):
+        self.write_roadmap(ROADMAP.replace("| 9–13 | planned |", "| 9–13 | in progress |"))
+        self.session("s1", [command(0, "mra-build", "add-c"), tick(6), tick(12)])
+        done = self.run_effort("report", "demo", "--logs", str(self.logs))
+        self.assertEqual(done.returncode, 0, done.stderr)
+        report = (self.orch / "docs/roadmap/demo-effort.md").read_text()
+        self.assertIn("| Actual (h) | So far (h) | Variance (h) |", report)
+        self.assertIn("| add-c | Third slice |  |  | 8–12 | 12 | – | 0.2 |  |  | ⚪ |", report)
+        # without logs the column stays empty
+        self.run_effort("report", "demo", "--logs", str(self.tmp / "none"))
+        report = (self.orch / "docs/roadmap/demo-effort.md").read_text()
+        self.assertIn("| add-c | Third slice |  |  | 8–12 | 12 | – |  |  |  | ⚪ |", report)
+
     def test_report_gives_the_initiative_period(self):
         self.write_roadmap()
         self.run_effort("record", "demo", "add-a", "--phase", "build=1",
@@ -258,11 +321,11 @@ class MraEffortTest(TmpTestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         report = (self.orch / "docs/roadmap/demo-effort.md").read_text()
         self.assertIn("do not edit", report)
-        self.assertIn("| 1 | bd-2 | add-a | First slice |  |  | 5–8 | 8 | 10 | +2.0 | +25% | 🔴 | 10 |  |", report)
-        self.assertIn("| 2 | bd-3 | add-b | Second slice |  |  | 2–4 | 4 | 3 | -1.0 | -25% | 🟢 |  | 3 |", report)
-        self.assertIn("| 3 | bd-4 | add-c | Third slice |  |  | 8–12 | 12 | – |  |  | ⚪ |  |  |", report)
+        self.assertIn("| 1 | bd-2 | add-a | First slice |  |  | 5–8 | 8 | 10 |  | +2.0 | +25% | 🔴 | 10 |  |", report)
+        self.assertIn("| 2 | bd-3 | add-b | Second slice |  |  | 2–4 | 4 | 3 |  | -1.0 | -25% | 🟢 |  | 3 |", report)
+        self.assertIn("| 3 | bd-4 | add-c | Third slice |  |  | 8–12 | 12 | – |  |  |  | ⚪ |  |  |", report)
         self.assertNotIn("add-d", report)
-        self.assertIn("| **Total** | done slices |  |  |  | 12 | 13 | +1.0 | +8% | 🔴 | 10 | 3 |", report)
+        self.assertIn("| **Total** | done slices |  |  |  | 12 | 13 |  | +1.0 | +8% | 🔴 | 10 | 3 |", report)
         # one column per phase used, named after its command, in workflow order
         self.assertIn("| Variance (h) | Variance (%) |  | mra-build | mra-fix |", report)
         self.assertNotIn("mra-grill", report)

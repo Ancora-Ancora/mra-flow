@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Effort of mra-flow changes in effective hours, and estimate-vs-actual reports.
 
-  mra-effort measure <change-id> [--gap MIN] [--alias TEXT ...] [--logs DIR ...] [--json]
+  mra-effort measure <change-id> [--gap MIN] [--alias TEXT ...] [--logs DIR ...] [--json] [--no-infer]
       hours the agent or the user was active on the change, per phase, from the
-      Claude Code session logs of this orchestrator; plus the unattributed stretches
-      in the change's period, to assign or ignore
+      Claude Code session logs of this orchestrator, with its start and end; the
+      inferred stretches (commands naming no change, attributed by their session's
+      text); plus the unattributed stretches in the change's period, to assign or ignore
   mra-effort breakdown <change-id> [--gap MIN] [--alias TEXT ...] [--logs DIR ...] [--json]
       Markdown table for the archive summary: the change (epic) first with its total
       hours and tokens per model, then every plan task with its subagents' hours and
@@ -13,14 +14,17 @@
   mra-effort record <initiative> <change-id> --phase PHASE=HOURS ... [--actual HOURS] [--start T] [--end T]
       write the confirmed hours into docs/roadmap/<initiative>.md (Actual (h) and
       the "Actuals by phase" table)
-  mra-effort report <initiative>
+  mra-effort report <initiative> [--logs DIR ...] [--gap MIN]
       recompute the roadmap's Total lines and regenerate
-      docs/roadmap/<initiative>-effort.md (variance by slice, hours by phase)
+      docs/roadmap/<initiative>-effort.md (variance by slice, hours by phase, hours so
+      far of the open slices)
 
 Active time: consecutive timestamped events of a session (its subagents included)
 no more than --gap minutes apart (default 10). Each interval goes to the /mra-*
 command in progress in that session, and counts for <change-id> when the command's
-arguments name it (or one of --alias). Parallel sessions are summed, not merged.
+arguments name it (or one of --alias), or, when they name no change, when the change
+is the one the session's text names most (3+ times, twice the runner-up). Parallel
+sessions are summed, not merged.
 
 breakdown attributes each subagent (its first prompt) to the change by the change id,
 an alias or a task's bd id, and to a task by the bd id, else by a `task-N-` path; tokens
@@ -29,6 +33,7 @@ are input + cache creation + cache read + output of its assistant records.
 from __future__ import annotations
 
 import argparse
+import bisect
 import json
 import os
 import re
@@ -55,6 +60,10 @@ COMMAND = re.compile(r"<command-name>/?([\w:.-]+)</command-name>"
 RANGE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*(?:[-–]\s*(\d+(?:\.\d+)?))?\s*$")
 INJECTED = ("<", "Base directory for this skill", "Skill /", "(Re-invocation", "[Request interrupted")
 MIN_STRETCH_H = 0.05  # unattributed stretches shorter than 3 minutes are noise
+# Commands whose time belongs to one change; their arguments may name none (a grill topic, free text).
+INFERABLE = {name for name, phase in COMMAND_PHASE.items() if phase != "other"}
+INFER_MIN = 3        # the inferred change is named at least this often in the command's session text
+INFER_RATIO = 2      # and at least this many times as often as the runner-up
 
 
 class Refusal(Exception):
@@ -97,6 +106,54 @@ def _records(path: Path):
                 continue
             if isinstance(record, dict):
                 yield record
+
+
+def _all_text(record: dict) -> str:
+    """Every piece of text of a record: messages, tool inputs and tool results."""
+    content = (record.get("message") or {}).get("content")
+    if isinstance(content, str):
+        return content
+    parts = []
+    for block in content if isinstance(content, list) else []:
+        if not isinstance(block, dict):
+            continue
+        if block.get("type") == "text":
+            parts.append(block.get("text", ""))
+        elif block.get("type") == "tool_use":
+            parts.append(json.dumps(block.get("input", {})))
+        elif block.get("type") == "tool_result":
+            inner = block.get("content")
+            parts.append(inner if isinstance(inner, str) else
+                         " ".join(b.get("text", "") for b in inner or [] if isinstance(b, dict)))
+    return " ".join(parts)
+
+
+def session_segments(main: Path, ids: set[str]) -> tuple[list[float], list[str | None]]:
+    """For each mra command typed in the session, from it to the next: the change it worked on,
+    when its arguments name none, inferred from how often each change id appears in the text."""
+    patterns = {i: re.compile(rf"(?<![\w-]){re.escape(i)}(?![\w-])") for i in ids}
+    times, counts = [], []
+    for record in _records(main):
+        text = _all_text(record)
+        # a command typed by the user, as session_events sees it: not one quoted in a tool result
+        found = COMMAND.search(_text(record)) if record.get("type") == "user" else None
+        if found and found.group(1).startswith("mra-"):
+            t = _timestamp(record)
+            if t is not None:
+                times.append(t)
+                counts.append({})
+            continue
+        if counts:
+            for i, pattern in patterns.items():
+                n = len(pattern.findall(text))
+                if n:
+                    counts[-1][i] = counts[-1].get(i, 0) + n
+    changes = []
+    for count in counts:
+        ranked = sorted(count.values(), reverse=True) + [0]
+        top = max(count, key=count.get) if count else None
+        changes.append(top if top and ranked[0] >= INFER_MIN and ranked[0] >= INFER_RATIO * ranked[1] else None)
+    return times, changes
 
 
 @dataclass
@@ -151,6 +208,7 @@ class Stretch:
     hours: float
     context: str
     prompt: str
+    phase: str = ""   # set on an inferred stretch
 
 
 @dataclass
@@ -159,11 +217,12 @@ class Measure:
     unattributed: list[Stretch] = field(default_factory=list)
     sessions: int = 0
     intervals: dict[Path, list[tuple[float, float]]] = field(default_factory=dict)
+    inferred: list[Stretch] = field(default_factory=list)
     start: float | None = None   # first and last attributed minute: the change's period
     end: float | None = None
 
 
-def measure(change: str, aliases: list[str], logs: list[Path], gap_min: float) -> Measure:
+def measure(change: str, aliases: list[str], logs: list[Path], gap_min: float, infer: bool = True) -> Measure:
     others = known_change_ids() - {change}
     names = [change, *aliases]
     gap = gap_min * 60
@@ -173,19 +232,34 @@ def measure(change: str, aliases: list[str], logs: list[Path], gap_min: float) -
     for directory in logs:
         for main in sorted(directory.glob("*.jsonl")):
             events = session_events(main)
+            seg_times, seg_changes = session_segments(main, others | {change}) if infer else ([], [])
             context: tuple[str, str] | None = None
-            prompt, previous, run = "", None, None
+            prompt, previous, run, guess = "", None, None, None
             for event in events:
                 if previous is not None and event.t - previous <= gap:
                     hours = (event.t - previous) / 3600
                     phase = None
                     if context and context[0] in COMMAND_PHASE and any(_names(context[1], n) for n in names):
                         phase = COMMAND_PHASE[context[0]]
+                    inferred = None
+                    if not phase and context and context[0] in INFERABLE and seg_times \
+                            and not any(_names(context[1], o) for o in others):
+                        at_seg = bisect.bisect_right(seg_times, previous) - 1
+                        inferred = seg_changes[at_seg] if at_seg >= 0 else None
+                        if inferred == change:
+                            phase = COMMAND_PHASE[context[0]]
+                            label = f"/{context[0]} {context[1]}".strip()
+                            if guess is None or guess.context != label or previous - guess.end > gap:
+                                guess = Stretch(main.stem[:8], previous, event.t, 0.0, label, prompt, phase)
+                                result.inferred.append(guess)
+                            guess.end, guess.hours = event.t, guess.hours + hours
                     if phase:
                         result.phases[phase] = result.phases.get(phase, 0.0) + hours
                         period.extend((previous, event.t))
                         result.intervals.setdefault(main, []).append((previous, event.t))
                         run = None
+                    elif inferred is not None:
+                        run = None   # another change's work
                     elif not (context and any(_names(context[1], o) for o in others)):
                         label = f"/{context[0]} {context[1]}".strip() if context else "(no command)"
                         if run is None or run.context != label or previous - run.end > gap:
@@ -229,6 +303,9 @@ def print_measure(change: str, result: Measure, gap: float, as_json: bool) -> No
             "unattributed": [{"session": s.session, "start": _clock(s.start), "end": _clock(s.end),
                               "hours": round(s.hours, 2), "context": s.context, "prompt": s.prompt}
                              for s in result.unattributed],
+            "inferred": [{"session": s.session, "start": _clock(s.start), "end": _clock(s.end),
+                          "hours": round(s.hours, 2), "phase": s.phase, "context": s.context}
+                         for s in result.inferred],
         }, indent=2))
         return
     print(f"{change}: {fmt(total)} h attributed (gap {fmt(gap)} min, {result.sessions} sessions)")
@@ -238,6 +315,11 @@ def print_measure(change: str, result: Measure, gap: float, as_json: bool) -> No
         if result.phases.get(phase):
             hours = result.phases[phase]
             print(f"  {phase:<10} {fmt(hours) if hours >= 0.05 else '<0.1'} h")
+    if result.inferred:
+        print("inferred from the session (reject any that is wrong):")
+        for i, s in enumerate(result.inferred, 1):
+            print(f"  {i:>2}  {_clock(s.start)}-{_clock(s.end)[11:]} UTC  {fmt(s.hours)} h  {s.phase:<8} "
+                  f"session {s.session}  {s.context}")
     if result.unattributed:
         print("unattributed stretches in the change's period (assign to a phase or ignore):")
         for i, s in enumerate(result.unattributed, 1):
@@ -537,7 +619,7 @@ def _sum(ranges: list[tuple[float, float]]) -> str:
     return f"{fmt(sum(r[0] for r in ranges))}–{fmt(sum(r[1] for r in ranges))}"
 
 
-def report(initiative: str) -> Path:
+def report(initiative: str, logs: list[Path] | None = None, gap: float = 10.0) -> Path:
     path = roadmap_path(initiative)
     text = path.read_text(encoding="utf-8")
     lines = text.splitlines()
@@ -590,6 +672,16 @@ def report(initiative: str) -> Path:
                                  and (h := parse_hours(r[i]))}
     used = [p for p in PHASES if any(p in hours for hours in phase_hours.values())]
 
+    # Hours so far of the slices still open, measured now (nothing when the logs are not there).
+    so_far: dict[str, float] = {}
+    logs = [d for d in (logs if logs is not None else default_logs()) if d.is_dir()]
+    if logs:
+        for r in live:
+            if r[col["Status"]] != "done":
+                hours = sum(measure(r[col["Change id"]], [], logs, gap).phases.values())
+                if hours:
+                    so_far[r[col["Change id"]]] = hours
+
     variance_rows, sum_est, sum_act = [], 0.0, 0.0
     sum_phase = {p: 0.0 for p in used}
     for r, est in zip(live, estimates):
@@ -597,7 +689,8 @@ def report(initiative: str) -> Path:
         upper = est[1] if est else None
         cells = [r[col.get("#", 0)] if "#" in col else "", r[col["Epic"]], r[col["Change id"]],
                  r[col["Goal"]], *(r[col[d]] if d in col else "" for d in DATES), r[col["Estimate (h)"]] or "–", fmt(upper) if upper is not None else "–",
-                 fmt(actual) if actual is not None else "–"]
+                 fmt(actual) if actual is not None else "–",
+                 fmt(so_far[r[col["Change id"]]]) if r[col["Change id"]] in so_far else ""]
         if actual is not None and upper:
             diff = actual - upper
             sum_est, sum_act = sum_est + upper, sum_act + actual
@@ -612,7 +705,8 @@ def report(initiative: str) -> Path:
     if sum_est or any(sum_phase.values()):
         diff = sum_act - sum_est
         total = ["", "", "**Total**", "done slices", "", "", "", fmt(sum_est) if sum_est else "",
-                 fmt(sum(parse_hours(r[8]) or 0 for r in variance_rows))]
+                 fmt(sum(parse_hours(r[8]) or 0 for r in variance_rows)),
+                 fmt(sum(so_far.values())) if so_far else ""]
         total += ([f"{diff:+.1f}", f"{diff / sum_est * 100:+.0f}%", "🔴" if diff > 0 else "🟢"]
                   if sum_est else ["", "", ""])
         total += [fmt(sum_phase[p]) for p in used]
@@ -626,7 +720,7 @@ def report(initiative: str) -> Path:
            "🟢 within it, ⚪ not done yet. The mra-* columns are the actual hours of each phase.", "",
            "## Variance by slice", "",
            *render(["#", "Epic", "Change id", "Summary", *DATES, "Estimate range (h)", "Estimated (h)", "Actual (h)",
-                    "Variance (h)", "Variance (%)", "", *(f"mra-{p}" if p != "other" else "other" for p in used)],
+                    "So far (h)", "Variance (h)", "Variance (%)", "", *(f"mra-{p}" if p != "other" else "other" for p in used)],
                    variance_rows), ""]
     target = ROADMAPS / f"{initiative}-effort.md"
     target.write_text("\n".join(out), encoding="utf-8")
@@ -662,6 +756,8 @@ def main(argv: list[str]) -> int:
     m.add_argument("--alias", action="append", default=[])
     m.add_argument("--logs", action="append", type=Path)
     m.add_argument("--json", action="store_true")
+    m.add_argument("--no-infer", action="store_true",
+                   help="do not attribute commands that name no change by the change their session talks about")
     b = sub.add_parser("breakdown")
     b.add_argument("change")
     b.add_argument("--gap", type=float, default=10.0)
@@ -677,6 +773,8 @@ def main(argv: list[str]) -> int:
     r.add_argument("--end", type=_when, help="last minute of work, 'YYYY-MM-DD HH:MM' UTC (measure's end)")
     p = sub.add_parser("report")
     p.add_argument("initiative")
+    p.add_argument("--logs", action="append", type=Path)
+    p.add_argument("--gap", type=float, default=10.0)
     args = parser.parse_args(argv)
     try:
         if args.cmd in ("measure", "breakdown"):
@@ -687,7 +785,8 @@ def main(argv: list[str]) -> int:
             if args.cmd == "breakdown":
                 print_breakdown(breakdown(args.change, args.alias, logs, args.gap), args.json)
             else:
-                print_measure(args.change, measure(args.change, args.alias, logs, args.gap), args.gap, args.json)
+                print_measure(args.change, measure(args.change, args.alias, logs, args.gap, not args.no_infer),
+                              args.gap, args.json)
         elif args.cmd == "record":
             phases: dict[str, float] = {}
             for name, hours in args.phase:
@@ -697,7 +796,7 @@ def main(argv: list[str]) -> int:
             record(args.initiative, args.change, phases, args.actual, args.start, args.end)
             print(f"recorded {args.change} in docs/roadmap/{args.initiative}.md")
         else:
-            print(f"wrote {report(args.initiative).relative_to(ROOT)}")
+            print(f"wrote {report(args.initiative, args.logs, args.gap).relative_to(ROOT)}")
     except Refusal as exc:
         print(f"mra-effort: {exc}", file=sys.stderr)
         return 1

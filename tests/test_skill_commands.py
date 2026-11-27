@@ -228,11 +228,13 @@ class RoadmapTest(unittest.TestCase):
         self.assertIn("only which to **leave out**", text)
         self.assertIn("the done slices too", text)
 
-    def test_retro_gathers_aliases_and_unnamed_commands(self):
+    def test_unnamed_commands_are_inferred_and_shown_apart(self):
         rule = ROADMAP.read_text(encoding="utf-8")
-        self.assertIn("**aliases**", rule)
-        self.assertIn("**commands without a change id**", rule)
-        self.assertIn("`closed_at`", rule)
+        self.assertIn("**inferred** stretches", rule)
+        self.assertIn("`--no-infer`", rule)
+        self.assertIn("**so far**", rule)
+        self.assertIn("inferred stretches", self.skill("mra-archive"))
+        self.assertIn("`inferred` stretches", self.skill("mra-roadmap"))
 
     def test_actuals_heading_is_never_written_by_hand(self):
         self.assertIn("never write the heading by hand", ROADMAP.read_text(encoding="utf-8"))
